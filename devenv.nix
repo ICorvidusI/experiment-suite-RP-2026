@@ -3,7 +3,7 @@
 {
   # https://devenv.sh/basics/
   env.GREET = "the expiriment environment";
-  env.MZN_SOLVER_PATH = config.git.root + "/pumpkin/minizinc";
+  env.MZN_SOLVER_PATH = config.git.root + "/Pumpkin/minizinc";
 
   # https://devenv.sh/packages/
   packages = [ pkgs.git ];
