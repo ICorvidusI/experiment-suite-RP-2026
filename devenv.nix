@@ -6,7 +6,10 @@
   env.MZN_SOLVER_PATH = config.git.root + "/Pumpkin/minizinc";
 
   # https://devenv.sh/packages/
-  packages = [ pkgs.git ];
+  packages = with pkgs; [
+    git
+    minizinc
+  ];
 
   # https://devenv.sh/languages/
   languages.rust = {
@@ -31,6 +34,7 @@
   enterShell = ''
     hello         # Run scripts directly
     git --version # Use packages
+    minizinc --version
   '';
 
   # https://devenv.sh/tasks/
