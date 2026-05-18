@@ -1,0 +1,1 @@
+/nix/store/7hvvnils4s0llli37kvri5s2ah5fvgvw-scripts-generate_nonograms.sh

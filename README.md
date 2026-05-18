@@ -25,4 +25,14 @@ Here you can find the experiments used for the paper and their history.
   exit
   ```
 
-##
+## Generate Nonograms
+
+```console
+  ./scripts/generate_nonograms.sh
+  ```
+
+## Solve nonogram using DFA based constraints
+
+```console
+  minizinc ./problems/nonogram/nonogram.mzn ./problems/nonogram/data/dfa/nonogram_{x}x{y}_seed_{z}.json
+  ```

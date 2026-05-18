@@ -1,0 +1,81 @@
+{
+  "description": "Instance for Nonogram model\ngenerated using scripts/problem_generators/nonogram.py\nInstance generated for grid size 2x2\nusing 2 as seed.\n\nGenerated board:\n1 2\n1 2",
+  "width": 2,
+  "height": 2,
+  "row_dfas": [
+    {
+      "Q": 2,
+      "S": 2,
+      "d": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "q0": 1,
+      "F": [
+        2
+      ]
+    },
+    {
+      "Q": 2,
+      "S": 2,
+      "d": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "q0": 1,
+      "F": [
+        2
+      ]
+    }
+  ],
+  "col_dfas": [
+    {
+      "Q": 1,
+      "S": 2,
+      "d": [
+        [
+          1,
+          0
+        ]
+      ],
+      "q0": 1,
+      "F": [
+        1
+      ]
+    },
+    {
+      "Q": 3,
+      "S": 2,
+      "d": [
+        [
+          1,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          0
+        ]
+      ],
+      "q0": 1,
+      "F": [
+        3
+      ]
+    }
+  ]
+}
