@@ -11,7 +11,7 @@ type Dfa = record(
   int: S,
   array[int] of array[int] of int: d,
   int: q0,
-  array[1..1] of int: F
+  set of int: F
 );
 
 type dfa_constraint_type = record(
@@ -37,7 +37,7 @@ array[int] of dfa_constraint_type: rows = [(
   S: row_dfas[i].S,
   d: array2d(1..row_dfas[i].Q, 1..row_dfas[i].S, [row_dfas[i].d[r][c] | r in index_set(row_dfas[i].d), c in index_set(row_dfas[i].d[r])]),
   q0: row_dfas[i].q0,
-  F: array2set(row_dfas[i].F),
+  F: row_dfas[i].F,
   sequence: row(grid, i)
 ) | i in 1..height];
 
@@ -46,7 +46,7 @@ array[int] of dfa_constraint_type: cols = [(
   S: col_dfas[i].S,
   d: array2d(1..col_dfas[i].Q, 1..col_dfas[i].S, [col_dfas[i].d[r][c] | r in index_set(col_dfas[i].d), c in index_set(col_dfas[i].d[r])]),
   q0: col_dfas[i].q0,
-  F: array2set(col_dfas[i].F),
+  F: col_dfas[i].F,
   sequence: col(grid, i)
 ) | i in 1..width];
 

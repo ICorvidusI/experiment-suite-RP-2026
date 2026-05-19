@@ -42,6 +42,7 @@ in
     
       text = ''
         #!/bin/sh
+        # Based on https://github.com/JulGvoz/nfa-propagator-explanations/blob/main/experiments/gen_nonogram.sh
         set -eux
 
         while read width height; do
