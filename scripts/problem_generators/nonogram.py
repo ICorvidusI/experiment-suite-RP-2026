@@ -215,7 +215,7 @@ class NonogramInstance:
             for x in range(self.width)
         ]
 
-        return json.dumps({"description": description + boardStr, "width": self.width, "height": self.height, "row_dfas": row_cdfas, "col_dfas": col_cdfas}, indent=2)
+        return json.dumps({"description": description + boardStr, "width": self.width, "height": self.height, "row_cdfas": row_cdfas, "col_cdfas": col_cdfas}, indent=2)
 
 
 
