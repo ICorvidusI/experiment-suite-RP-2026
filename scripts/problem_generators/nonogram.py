@@ -270,15 +270,14 @@ def main():
     nonogram.generate(args.density)
 
     # Make sure the internal direcories exist.
-    if not os.path.exists(args.data + "/dfa"):
-        os.makedirs(args.data + "/dfa")
-
-    if not os.path.exists(args.data + "/cdfa"):
-        os.makedirs(args.data + "/cdfa")
+    os.makedirs(args.data + "/dfa", exist_ok=True)
+    os.makedirs(args.data + "/cdfa", exist_ok=True)
+    if not os.path.exists(args.data + "/decomp"):
+        os.symlink(args.data + "/dfa", args.data + "/decomp", target_is_directory=True)
 
     # Generate the DFAs for this Nonogram.
     dfa = nonogram.dfas_json(args.seed)
-    print(dfa)
+    #print(dfa)
     data_file = os.path.join(
         os.path.realpath(args.data + "/dfa"),
         "nonogram_"
@@ -290,7 +289,7 @@ def main():
 
     # Generate the cDFA for this Nonogram.
     cdfa = nonogram.cdfas_json(args.seed)
-    print(cdfa)
+    #print(cdfa)
     data_file = os.path.join(
         os.path.realpath(args.data + "/cdfa"),
         "nonogram_"

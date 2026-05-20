@@ -1,0 +1,4 @@
+{"type": "statistics", "statistics": {"paths": 0, "flatIntVars": 625, "flatIntConstraints": 50, "method": "satisfy", "flatTime": 0.337576}}
+{"type": "status", "status": "UNSATISFIABLE", "time": 921}
+{"type": "statistics", "statistics": {"initTime": 0.148803352, "nodes": 27, "restarts": 0, "peakDepth": 8, "solveTime": 0.414642034, "variables": 626, "propagators": 51, "failures": 23, "propagations": 1870, "nogoods": 23, "AverageConflictSize": 9.590909090909092, "NumUnitNogoodsLearned": 2, "AverageLearnedNogoodLength": 22.09090909090909, "AverageBacktrackAmount": 0, "AverageLbd": 3.5}}
+{"type": "statistics", "statistics": {"nSolutions": 0}}
