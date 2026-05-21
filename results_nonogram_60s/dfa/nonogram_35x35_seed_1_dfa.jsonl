@@ -1,4 +1,4 @@
-{"type": "statistics", "statistics": {"paths": 0, "flatIntVars": 1225, "flatIntConstraints": 70, "method": "satisfy", "flatTime": 0.354356}}
-{"type": "status", "status": "UNKNOWN", "time": 60025}
-{"type": "statistics", "statistics": {"initTime": 0.228607577, "nodes": 6201, "restarts": 0, "peakDepth": 77, "solveTime": 59.421579066, "variables": 1226, "propagators": 71, "failures": 4181, "propagations": 345738, "nogoods": 4181, "AverageConflictSize": 13.55991389619708, "NumUnitNogoodsLearned": 3, "AverageLearnedNogoodLength": 105.0724707007893, "AverageBacktrackAmount": 0, "AverageLbd": 25.20330064577852}}
+{"type": "statistics", "statistics": {"paths": 0, "flatIntVars": 1225, "flatIntConstraints": 70, "method": "satisfy", "flatTime": 0.371851}}
+{"type": "status", "status": "UNKNOWN", "time": 60018}
+{"type": "statistics", "statistics": {"initTime": 0.296975129, "nodes": 5603, "restarts": 0, "peakDepth": 70, "solveTime": 59.325258035, "variables": 1226, "propagators": 71, "failures": 3613, "propagations": 307200, "nogoods": 3613, "AverageConflictSize": 10.24522557431497, "NumUnitNogoodsLearned": 4, "AverageLearnedNogoodLength": 54.1134791032383, "AverageBacktrackAmount": 0, "AverageLbd": 14.65983946858566}}
 {"type": "statistics", "statistics": {"nSolutions": 0}}
