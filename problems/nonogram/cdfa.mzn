@@ -6,6 +6,17 @@
 
 include "globals.mzn";
 
+predicate regular_cdfa(
+  array[int] of var int: x,
+  int: Q,
+  int: S,
+  array[int] of int: d,
+  int: q0,
+  array[int] of int: inc,
+  var int: N
+);
+
+
 type cdfa = record(
   int: Q,
   int: S,
