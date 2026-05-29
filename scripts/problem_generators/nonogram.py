@@ -147,7 +147,7 @@ class NonogramInstance:
                 d[i][i % 2] = i + 1             # To self on empty for odd states and on fill for even states (start numbering at 1)
                 d[i][(i + 1) % 2] = i + 2       # To next on fill for odd states and on empty for even states
 
-                inc[i][1] = (n + 1) ** (1 // 2) # count 1 for the first hint, (n + 1) for the second, etc. The last transition counts more than the count.
+                inc[i][1] = (n + 1) ** (i // 2) # count 1 for the first hint, (n + 1) for the second, etc. The last transition counts more than the count.
 
             # keep looping to self for both at the last state
             d[q - 1][0] = q
@@ -158,6 +158,17 @@ class NonogramInstance:
                 count += int(hint[i]) * ((n + 1) ** i)
 
         return {'Q': q, 'S': 2, 'd': d.tolist(), 'q0': 1, "inc": inc.tolist(), "N": count}
+
+        # def hint_to_cdfas(self, hint: NDArray[np.int_], n: int) -> NDArray:
+
+        #     cdfas = []
+
+        #     for (i, h) in enumerate(hint):
+        #         
+        #         cdfas.add({'Q': q, 'S': 2, 'd': d.tolist(), 'q0': 1, "inc": inc.tolist(), "N": count})
+        #     
+        #     return np.array(cdfas)
+
 
     def dfas_json(self, seed: int) -> str:
         # Start by describing the instance

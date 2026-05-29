@@ -6,5 +6,5 @@ RunnerMode = namedtuple('RunnerMode', ['id', 'solver', 'lib', 'parameters', 'nam
 runner_modes = {
     "decomposition": RunnerMode("decomp", 'pumpkin-decomposition.msc', 'lib-decomposition', [], 'Decomposition'),
     "dfa": RunnerMode("dfa", "pumpkin.msc", "lib", [], 'DFA propagator'),
-    # "cdfa": RunnerMode("cdfa", "pumpkin.msc", "lib", [], 'cDFA propagator')
+    "cdfa": RunnerMode("cdfa", "pumpkin.msc", "lib", [], 'cDFA propagator')
 }

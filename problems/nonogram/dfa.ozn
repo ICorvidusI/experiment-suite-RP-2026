@@ -1,5 +1,5 @@
-output ["grid = \n",let {array [int] of string: X_INTRODUCED_703_ = [], array [int] of string: X_INTRODUCED_704_ = [], array [int,int] of string: X_INTRODUCED_705_ = [(X_INTRODUCED_701_, X_INTRODUCED_702_) : showDzn(grid[X_INTRODUCED_701_,X_INTRODUCED_702_]) | X_INTRODUCED_701_ in index_set_1of2(grid), X_INTRODUCED_702_ in index_set_2of2(grid)]} in (show2d_indexed(X_INTRODUCED_703_,X_INTRODUCED_704_,X_INTRODUCED_705_)),";\n"];
-int: width = 20;
-int: height = 20;
-array [1..400] of int: X_INTRODUCED_16_;
-array [1..height,1..width] of int: grid = array2d(1..20,1..20,X_INTRODUCED_16_);
+output ["grid = \n",let {array [int] of string: X_INTRODUCED_859_ = [], array [int] of string: X_INTRODUCED_860_ = [], array [int,int] of string: X_INTRODUCED_861_ = [(X_INTRODUCED_857_, X_INTRODUCED_858_) : showDzn(grid[X_INTRODUCED_857_,X_INTRODUCED_858_]) | X_INTRODUCED_857_ in index_set_1of2(grid), X_INTRODUCED_858_ in index_set_2of2(grid)]} in (show2d_indexed(X_INTRODUCED_859_,X_INTRODUCED_860_,X_INTRODUCED_861_)),";\n"];
+int: width = 10;
+int: height = 10;
+array [1..100] of int: X_INTRODUCED_16_;
+array [1..height,1..width] of int: grid = array2d(1..10,1..10,X_INTRODUCED_16_);

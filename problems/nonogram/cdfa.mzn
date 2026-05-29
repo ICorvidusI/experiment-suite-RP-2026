@@ -60,7 +60,7 @@ array[int] of cdfa_constraint_type: cols = [(
   S: col_cdfas[i].S,
   d: array1d(array2d(1..col_cdfas[i].Q, 1..col_cdfas[i].S, [col_cdfas[i].d[r][c] | r in index_set(col_cdfas[i].d), c in index_set(col_cdfas[i].d[r])])),
   q0: col_cdfas[i].q0,
-  inc: array1d(array2d(1..row_cdfas[i].Q, 1..row_cdfas[i].S, [row_cdfas[i].inc[r][c] | r in index_set(row_cdfas[i].inc), c in index_set(row_cdfas[i].inc[r])])),
+  inc: array1d(array2d(1..col_cdfas[i].Q, 1..col_cdfas[i].S, [col_cdfas[i].inc[r][c] | r in index_set(col_cdfas[i].inc), c in index_set(col_cdfas[i].inc[r])])),
   N: col_cdfas[i].N,
   sequence: col(grid, i)
 ) | i in 1..width];
