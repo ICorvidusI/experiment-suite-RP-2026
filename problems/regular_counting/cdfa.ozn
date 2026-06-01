@@ -1,0 +1,4 @@
+output ["N = ",showDzn(N),";\n","sequence = ",showDzn(sequence),";\n"];
+int: sequence_length = 20;
+array [1..sequence_length] of int: sequence;
+int: N;

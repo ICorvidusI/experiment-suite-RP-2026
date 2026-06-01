@@ -8,8 +8,8 @@
 Nonogram problem generator.
 Adapted from https://github.com/JulGvoz/nfa-propagator-explanations/blob/main/experiments/problem_generators/nonogram.py
 
-Example usage, from experiments/ directory:
-pipenv run python problem_generators/nonogram.py \
+Example usage:
+uv run problem_generators/nonogram.py \
     --width 5 --height 3 --density 0.5 --seed 42
 """
 
@@ -283,7 +283,7 @@ def main():
     # Make sure the internal direcories exist.
     os.makedirs(args.data + "/dfa", exist_ok=True)
     os.makedirs(args.data + "/cdfa", exist_ok=True)
-    if not os.path.exists(args.data + "/decomp"):
+    if not os.path.islink(args.data + "/decomp"):
         os.symlink(args.data + "/dfa", args.data + "/decomp", target_is_directory=True)
 
     # Generate the DFAs for this Nonogram.
