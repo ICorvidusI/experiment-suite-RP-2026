@@ -40,20 +40,21 @@ class RegularCountingInstance:
         self.k = k
 
         self.dfa = DFA();
-        self.dfa.States = np.arange(1, num_states + 1).tolist()
-        self.dfa.Sigma = set(np.arange(1, alphabet_size + 1).tolist())
+        self.dfa.States = [state for state in range(1, num_states + 2)]
+        self.dfa.setSigma({int(sym) for sym in range(1, alphabet_size + 1)})
         self.dfa.Initial = 0
         self.dfa.Final = {num_states - 1}
+        self.dfa.i = False
 
     def generate(self):
-        # Make sure a random path from 1 to n exists
-        guaranteed_path = np.arange(2, self.num_states).tolist()
+        # Make sure a random path from 1 to n+1 exists
+        guaranteed_path = [state for state in range(2, self.num_states + 1)]
         random.shuffle(guaranteed_path)
         guaranteed_path.insert(0, 1)
-        guaranteed_path.append(self.num_states)
+        guaranteed_path.append(self.num_states + 1)
 
         alphabet = np.arange(1, self.alphabet_size + 1).tolist()
-        for i in range(self.num_states - 1):
+        for i in range(self.num_states):
             # Randomize symbols
             random.shuffle(alphabet)
 
@@ -73,63 +74,71 @@ class RegularCountingInstance:
 
     def to_dfa(self) -> object:
 
-        transitions = np.zeros(shape=(self.num_states, self.alphabet_size), dtype=int)
+        q: int = len(self.dfa.States)
+        s: int = len(self.dfa.Sigma)
+
+        transitions: list[list[int]] = np.zeros(shape=(q, s), dtype=int).tolist()
         for (state, sym, next_state) in self.dfa.transitions():
             transitions[state - 1][sym - 1] = next_state
 
         new_dfa = DFA()
+        new_dfa.setSigma(self.dfa.Sigma)
         new_dfa.States.append(1)
+        new_dfa.Initial = 0
+        new_dfa.i = False
 
         # Create k + 1 copies concatenated
         for n in range(max(self.k) + 1):
-            merge_state = n * (self.num_states - 1)
+            merge_state = n * (q - 1) + 1
 
-            for new_state in range(1, self.num_states):
-                new_dfa.States.append(merge_state + (new_state + 1))
+            for new_state in range(merge_state + 1, merge_state + q):
+                new_dfa.States.append(new_state)
 
             # Add final states
             if n in self.k:
-                new_dfa.addFinal(merge_state)
-                for new_state in range(self.num_states - 2):
-                    new_dfa.addFinal(merge_state + (new_state + 1))
+                new_dfa.addFinal(merge_state - 1)
+                for new_state in range(q - 2):
+                    new_dfa.addFinal(merge_state + new_state)
 
             # Add transitions
-            for state in range(self.num_states - 1):
-                for sym in range(self.alphabet_size):
-                    next_state = merge_state + transitions[state][sym];
-                    new_dfa.addTransition(merge_state + (state + 1), (sym + 1), next_state)
+            for state in range(q - 1):
+                for sym in range(s):
+                    next_state = merge_state + transitions[state][sym] - 1;
+                    new_dfa.addTransition(merge_state + state - 1, (sym + 1), next_state - 1)
+
+        new_q = len(new_dfa.States)
+        for sym in range(s):
+            new_dfa.addTransition(new_q - 1, (sym + 1), new_q - 1)
 
         # Minimize
-        new_dfa.minimalBrzozowski()
+        minimal_dfa = new_dfa.minimalHopcroft()
 
-        q: int = len(new_dfa.States)
-        s: int = self.alphabet_size
-
-        d = np.zeros(shape=(q, s), dtype=int)
-        for (state, sym, next_state) in new_dfa.transitions():
+        minimal_q: int = len(minimal_dfa.States)
+        
+        d = np.zeros(shape=(minimal_q, s), dtype=int)
+        for (state, sym, next_state) in minimal_dfa.transitions():
             d[state - 1][sym - 1] = next_state
 
-        f = [state + 1 for state in new_dfa.Final]
+        f = [state + 1 for state in minimal_dfa.Final]
         
-        return {'Q': q, 'S': s, 'd': d.tolist(), 'q0': 1, 'F': {'set': f}, 'sequence_length' : self.sequence_length}
+        return {'Q': minimal_q, 'S': s, 'd': d.tolist(), 'q0': 1, 'F': {'set': f}, 'sequence_length' : self.sequence_length}
 
     def to_cdfa(self) -> object:
-
-        new_dfa = self.dfa.dup()
-
-        for sym in new_dfa.Sigma:
-            new_dfa.addTransition(self.num_states, sym, 1)
-
         q = self.num_states
         s = self.alphabet_size
 
-        d = np.zeros(shape=(q, s), dtype=int)
-        inc = np.zeros(shape=(q, s), dtype=int)
-        for (state, sym, next_state) in new_dfa.transitions():
-            d[state - 1][sym - 1] = next_state
+        new_dfa = self.dfa.dup()
 
-            if next_state == self.num_states:
+        inc = np.zeros(shape=(q, s), dtype=int)
+        for (state, sym, next_state) in self.dfa.transitions():
+            if state <= self.num_states and next_state == self.num_states + 1:
+                new_dfa.delTransition(state, sym, next_state)
+                new_dfa.addTransition(state, sym, 1)
                 inc[state - 1][sym - 1] = 1
+
+        d = np.zeros(shape=(q, s), dtype=int)
+        for (state, sym, next_state) in new_dfa.transitions():
+            d[state - 1][sym - 1] = next_state                
         
         return {'Q': q, 'S': s, 'd': d.tolist(), 'q0': 1, 'inc': inc.tolist(), 'counts': {'set': self.k}, 'sequence_length' : self.sequence_length}
 

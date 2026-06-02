@@ -9,19 +9,19 @@ import subprocess
 import shutil
 from config import RunnerMode, runner_modes
 import datetime
-import asyncio
+# import asyncio
 
 
-def background(f):
-    def wrapped(*args, **kwargs):
-        return asyncio.get_event_loop().run_in_executor(
-            None, f, *args, **kwargs
-        )
-
-    return wrapped
-
-
-@background
+# def background(f):
+#     def wrapped(*args, **kwargs):
+#         return asyncio.get_event_loop().run_in_executor(
+#             None, f, *args, **kwargs
+#         )
+#
+#     return wrapped
+#
+#
+# @background
 def run_solver(
     solver_dir: str,
     problem: str,
@@ -53,6 +53,7 @@ def run_solver(
                 "--statistics",
                 "--output-time",
                 "--output-objective",
+                "--all-solutions",
                 "--time-limit", f"{time_limit * 1000}",
                 # "--output-to-file", output_file,
             ] + mode.parameters + [
