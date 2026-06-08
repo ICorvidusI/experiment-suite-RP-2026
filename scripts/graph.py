@@ -244,7 +244,7 @@ def main():
 
     if os.path.isfile(f"{result_dir}/compiled_data.npy"):
         # Load precompiled
-        mode_results = np.load(f"{result_dir}/compiled_data.npy")
+        mode_results = np.load(f"{result_dir}/compiled_data.npy", allow_pickle=True)
     else:
         # Compile and save
         mode_results = compile_data(result_dir)
