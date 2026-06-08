@@ -81,74 +81,98 @@ in
 
         # small alphabet, small count
         create << EOF
-        2 2 6
+        3 3 9
         1 2
-        3 2 9
+        5 3 15
         1 2
-        4 2 12
+        7 3 21
         1 2
-        5 2 15
+        9 3 27
         1 2
         EOF
 
         # small alphabet, medium count
         create << EOF
-        2 2 10
+        3 3 15
         1 4
-        3 2 15
+        5 3 25
         1 4
-        4 2 20
+        7 3 35
         1 4
-        5 2 25
+        9 3 45
         1 4
         EOF
 
         # small alphabet, large count
         create << EOF
-        2 2 18
+        3 3 27
         1 8
-        3 2 27
+        5 3 45
         1 8
-        4 2 36
+        7 3 63
         1 8
-        5 2 45
+        9 3 81
         1 8
+        EOF
+
+        # small alphabet, huge count
+        create << EOF
+        3 3 51
+        1 16
+        5 3 85
+        1 16
+        7 3 119
+        1 16
+        9 3 153
+        1 16
         EOF
 
         # medium alphabet, small count
         create << EOF
-        2 3 6
+        3 6 9
         1 2
-        3 3 9
+        5 6 15
         1 2
-        4 3 12
+        7 6 21
         1 2
-        5 3 15
+        9 6 27
         1 2
         EOF
 
         # medium alphabet, medium count
         create << EOF
-        2 3 10
+        3 6 15
         1 4
-        3 3 15
+        5 6 25
         1 4
-        4 3 20
+        7 6 35
         1 4
-        5 3 25
+        9 6 45
         1 4
         EOF
 
         # medium alphabet, large count
         create << EOF
-        2 3 18
+        3 6 27
         1 8
-        3 3 27
+        5 6 45
         1 8
-        4 3 36
+        7 6 63
         1 8
-        5 3 45
+        9 6 81
         1 8
+        EOF
+
+        # medium alphabet, huge count
+        create << EOF
+        3 6 51
+        1 16
+        5 6 85
+        1 16
+        7 6 119
+        1 16
+        9 6 153
+        1 16
         EOF
 
       '';

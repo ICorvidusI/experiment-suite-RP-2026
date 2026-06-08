@@ -167,6 +167,8 @@ class Result():
                     self.nSolutions = nSolutions
     
                 case {'type': 'status', 'status': "UNSATISFIABLE", 'time': _}:
+                    print(line)
+                    print(f"{self.type}, Seed: {self.seed}\nStates: {self.states}, Alphabet: {self.alphabet}, Sequence: {self.sequence}, \nCounts: {self.counts}")
                     self.status = SolveStatus.UNSATISFIABLE
     
                 case {'type': 'status', 'status': "ALL_SOLUTIONS", 'time': _}:
@@ -179,25 +181,7 @@ class Result():
         return self.collect()
 
 
-def main():
-    description = "Visualize the data from an experiment."
-
-    argument_parser = argparse.ArgumentParser(
-        description=description
-    )
-
-    argument_parser.add_argument(
-        "--result-dir",
-        type=str,
-        required=True,
-        help="Directory containing the results of an experiment."
-    )
-
-    args = argument_parser.parse_args()
-
-    result_dir = args.result_dir
-    graph_dir = f"{result_dir}/graphs"
-
+def compile_data(result_dir: str):
     parameter_names = ["states", "alphabet", "sequence", "k", "seed"]
 
     # Collect results
@@ -236,9 +220,39 @@ def main():
 
         mode_results_list.append(results)
 
-    os.makedirs(f"{graph_dir}", exist_ok=True)
+    return np.array(mode_results_list, dtype=CollectedResult)
 
-    mode_results = np.array(mode_results_list, dtype=CollectedResult)
+
+def main():
+    description = "Visualize the data from an experiment."
+
+    argument_parser = argparse.ArgumentParser(
+        description=description
+    )
+
+    argument_parser.add_argument(
+        "--result-dir",
+        type=str,
+        required=True,
+        help="Directory containing the results of an experiment."
+    )
+
+    args = argument_parser.parse_args()
+
+    result_dir = args.result_dir
+    graph_dir = f"{result_dir}/graphs"
+
+    if os.path.isfile(f"{result_dir}/compiled_data.npy"):
+        # Load precompiled
+        mode_results = np.load(f"{result_dir}/compiled_data.npy")
+    else:
+        # Compile and save
+        mode_results = compile_data(result_dir)
+        np.save(f"{result_dir}/compiled_data", mode_results, allow_pickle=True)
+
+
+
+    os.makedirs(f"{graph_dir}", exist_ok=True)
 
     color = ["blue", "orange", "black"]
     for i, mode in enumerate(runner_modes.values()):
