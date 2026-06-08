@@ -9,7 +9,7 @@ in
 {
   # https://devenv.sh/basics/
   env = {
-    GREET = "the expiriment environment";
+    GREET = "the experiment environment";
     MZN_SOLVER_PATH = [ (config.git.root + "/Pumpkin/minizinc") ];
     LD_LIBRARY_PATH = "${lib.makeLibraryPath buildInputs}";
   };
