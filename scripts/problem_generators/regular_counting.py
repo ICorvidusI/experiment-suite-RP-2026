@@ -63,14 +63,14 @@ class RegularCountingInstance:
             next_state = guaranteed_path[i + 1]
             sym = alphabet[0]
 
-            self.dfa.addTransition(state, sym, next_state)
+            self.dfa.addTransition(state - 1, sym, next_state)
 
             # Randomly assign the other transistions
             for j in range(1, self.alphabet_size):
                 next_state = random.choice(guaranteed_path)
                 sym = alphabet[j]
 
-                self.dfa.addTransition(state, sym, next_state)
+                self.dfa.addTransition(state - 1, sym, next_state)
 
     def to_dfa(self) -> object:
 
@@ -79,7 +79,7 @@ class RegularCountingInstance:
 
         transitions: list[list[int]] = np.zeros(shape=(q, s), dtype=int).tolist()
         for (state, sym, next_state) in self.dfa.transitions():
-            transitions[state - 1][sym - 1] = next_state
+            transitions[state][sym - 1] = next_state
 
         new_dfa = DFA()
         new_dfa.setSigma(self.dfa.Sigma)
@@ -91,21 +91,23 @@ class RegularCountingInstance:
         for n in range(max(self.k) + 1):
             merge_state = n * (q - 1) + 1
 
+            # add new states
             for new_state in range(merge_state + 1, merge_state + q):
                 new_dfa.States.append(new_state)
 
             # Add final states
             if n in self.k:
-                new_dfa.addFinal(merge_state - 1)
-                for new_state in range(q - 2):
-                    new_dfa.addFinal(merge_state + new_state)
+                new_dfa.addFinal(merge_state)
+                for new_state in range(q - 1):
+                    new_dfa.addFinal(merge_state + new_state - 1)
 
             # Add transitions
             for state in range(q - 1):
                 for sym in range(s):
-                    next_state = merge_state + transitions[state][sym] - 1;
-                    new_dfa.addTransition(merge_state + state - 1, (sym + 1), next_state - 1)
+                    next_state = merge_state + transitions[state][sym];
+                    new_dfa.addTransition(merge_state + state - 1, (sym + 1), next_state - 2)
 
+        # Make final state loop to self on all.
         new_q = len(new_dfa.States)
         for sym in range(s):
             new_dfa.addTransition(new_q - 1, (sym + 1), new_q - 1)
@@ -113,15 +115,32 @@ class RegularCountingInstance:
         # Minimize
         minimal_dfa = new_dfa.minimalHopcroft()
 
+        # for i, state in enumerate(minimal_dfa.States):
+        #     if i not in minimal_dfa.delta:
+        #         print(f"{i}:{state}")
+        #     else:
+        #         print(f"{i}:{state}:{minimal_dfa.delta[i]}")
+        # print(minimal_dfa.Final)
+
         minimal_q: int = len(minimal_dfa.States)
-        
+
+        # Map DFA transitions from 1..Q inclusive with 0 being a reject trapstate.
         d = np.zeros(shape=(minimal_q, s), dtype=int)
-        for (state, sym, next_state) in minimal_dfa.transitions():
-            d[state - 1][sym - 1] = next_state
+        for i, state in enumerate(minimal_dfa.States):
+            for j, sym in enumerate(range(1, self.alphabet_size + 1)):
+                # map to fail state
+                if i not in minimal_dfa.delta:
+                    d[i][j] = 0
+                # map to fail state
+                elif sym not in minimal_dfa.delta[i]:
+                    d[i][j] = 0
+                # map state correctly
+                else:
+                    d[i][j] = minimal_dfa.delta[i][sym] + 1
 
         f = [state + 1 for state in minimal_dfa.Final]
         
-        return {'Q': minimal_q, 'S': s, 'd': d.tolist(), 'q0': 1, 'F': {'set': f}, 'sequence_length' : self.sequence_length}
+        return {'Q': minimal_q, 'S': s, 'd': d.tolist(), 'q0': minimal_dfa.Initial, 'F': {'set': f}, 'sequence_length' : self.sequence_length}
 
     def to_cdfa(self) -> object:
         q = self.num_states
@@ -134,11 +153,11 @@ class RegularCountingInstance:
             if state <= self.num_states and next_state == self.num_states + 1:
                 new_dfa.delTransition(state, sym, next_state)
                 new_dfa.addTransition(state, sym, 1)
-                inc[state - 1][sym - 1] = 1
+                inc[state][sym - 1] = 1
 
         d = np.zeros(shape=(q, s), dtype=int)
         for (state, sym, next_state) in new_dfa.transitions():
-            d[state - 1][sym - 1] = next_state                
+            d[state][sym - 1] = next_state                
         
         return {'Q': q, 'S': s, 'd': d.tolist(), 'q0': 1, 'inc': inc.tolist(), 'counts': {'set': self.k}, 'sequence_length' : self.sequence_length}
 
@@ -222,7 +241,7 @@ def main():
 
     # Generate the cDFA for this RegularCounting.
     cdfa = json.dumps(rc.to_cdfa(), indent=2)
-    #print(cdfa)
+    # print(cdfa)
     data_file = os.path.join(
         os.path.realpath(args.data + "/cdfa"),
         "regular_counting_"

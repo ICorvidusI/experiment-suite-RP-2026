@@ -243,7 +243,7 @@ def main():
     graph_dir = f"{result_dir}/graphs"
 
     if os.path.isfile(f"{result_dir}/compiled_data.npy"):
-        # Load precompiled
+        # Load precompiled if it exists
         mode_results = np.load(f"{result_dir}/compiled_data.npy", allow_pickle=True)
     else:
         # Compile and save
@@ -257,10 +257,10 @@ def main():
     color = ["blue", "orange", "black"]
     for i, mode in enumerate(runner_modes.values()):
 
-        x = mode_results[i][100].timeline
-        y = np.arange(1, len(mode_results[i][100].timeline) + 1)
+        x = np.arange(1, len(mode_results[i][-1].timeline) + 1)
+        y = mode_results[i][-1].nogoods
         
-        plt.plot(x, y, color=color[i], label=f"{mode_results[i][100].type}_{mode_results[i][100].states}")
+        plt.plot(x, y, color=color[i], label=f"{mode_results[i][-1].type}_{mode_results[i][-1].states}")
 
     plt.legend()
 
