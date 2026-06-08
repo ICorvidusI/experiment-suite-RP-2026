@@ -140,7 +140,7 @@ class RegularCountingInstance:
 
         f = [state + 1 for state in minimal_dfa.Final]
         
-        return {'Q': minimal_q, 'S': s, 'd': d.tolist(), 'q0': minimal_dfa.Initial, 'F': {'set': f}, 'sequence_length' : self.sequence_length}
+        return {'Q': minimal_q, 'S': s, 'd': d.tolist(), 'q0': minimal_dfa.Initial + 1, 'F': {'set': f}, 'sequence_length' : self.sequence_length}
 
     def to_cdfa(self) -> object:
         q = self.num_states
