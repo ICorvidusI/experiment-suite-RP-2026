@@ -11,6 +11,7 @@ import re
 import json
 from dataclasses import dataclass
 from enum import Enum
+from typing import Sequence
 
 from numpy._typing import NDArray
 
@@ -223,6 +224,95 @@ def compile_data(result_dir: str):
     return np.array(mode_results_list, dtype=CollectedResult)
 
 
+def parseValues(results: NDArray, func, states: int | None = None, alphabet: int | None = None, max_count: int | None = None, min_solutions: int | None = None):
+    values = []
+    labels = []
+    positions = []
+    for i, _ in enumerate(results):
+        filtered_results = results[i][np.where([
+            (states == None or result.states == states) and
+            (alphabet == None or result.alphabet == alphabet) and
+            (max_count == None or max(result.counts) == max_count) and
+            (min_solutions == None or result.nSolutions >= min_solutions)
+            for result in results[i]
+        ])]
+        solutions = [func(result) for result in filtered_results]
+        #values.append((np.mean(solutions), min(solutions), max(solutions)))
+        values.append(solutions)
+        labels.append(results[i][0].type)
+        positions.append(i)
+
+    return values, labels, positions
+
+def makeBoxplot(values, positions, labels, colors, title, x_label, y_label, filename, yscale, figwidth, figheight):
+    # boxplot
+    fig, ax = plt.subplots()
+    boxplot = ax.boxplot(values, positions=positions, widths=1.5, patch_artist=True,
+        showmeans=False, showfliers=True, tick_labels=labels,
+        medianprops={"color": "white", "linewidth": 0.5},
+        boxprops={"edgecolor": "white",
+                  "linewidth": 0.5},
+        whiskerprops={"linewidth": 1.5},
+        capprops={"linewidth": 1.5})
+
+    # fill with colors
+    for patch, color in zip(boxplot['boxes'], colors):
+        patch.set_facecolor(color)
+
+    if yscale == "linear": ax.set_ylim(bottom=0)
+    ax.set_yscale(yscale)
+
+    fig.set_figwidth(figwidth)
+    fig.set_figheight(figheight)
+    plt.title(title)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    plt.grid(axis='y', which='both')
+    plt.savefig(filename)
+    plt.close()
+
+
+def valuesByStates(results, func, state_nums, alphabet, max_count, colors, min_solutions): 
+    all_values = []
+    all_positions = []
+    all_labels = []
+    all_colors = []
+
+    for i, states in enumerate(state_nums):
+        values, labels, positions = parseValues(results, func, states=states, alphabet=alphabet, max_count=max_count, min_solutions=min_solutions)
+        all_values.extend(values)
+        all_positions.extend([(i * 8) + ((pos + 1) * 2) for pos in positions])
+        all_labels.extend([f"{label}{f"\n|Q|={states}" if label == "cdfa" else ""}" for label in labels])
+        all_colors.extend(colors)
+
+    return all_values, all_positions, all_labels, all_colors
+
+def plotByStatesAndWithoutX(results, func, graph_dir, file_name, title, setup, state_nums, alphabet, max_count, colors, min_solutions, x, x_name):
+    all_values, all_positions, all_labels, all_colors = valuesByStates(results, func, state_nums, alphabet, max_count, colors, min_solutions)
+
+    # boxplot
+    makeBoxplot(all_values, all_positions, all_labels, all_colors,
+        f"{title} {setup}", "", title,
+        f"{graph_dir}/{file_name}_vs_states_boxplot_alphabet_{alphabet}{f"_counts_1_{max_count}" if max_count is not None else ""}.png",
+        "log", 10, 8)
+
+    all_values = np.array(all_values, dtype=list)
+    all_labels = np.array(all_labels)
+    all_positions = np.array(all_positions)
+    all_colors = np.array(all_colors)
+
+    exclude_X_indices = np.where(np.mod(np.arange(len(all_values)), 3) != x)
+    all_values = all_values[exclude_X_indices].tolist()
+    all_labels = all_labels[exclude_X_indices].tolist()
+    all_positions = all_positions[exclude_X_indices]
+    all_colors = all_colors[exclude_X_indices]
+
+    # boxplot without X
+    makeBoxplot(all_values, all_positions, all_labels, all_colors,
+        f"{title} {setup}", "", title,
+        f"{graph_dir}/{file_name}_vs_states_boxplot_without_{x_name}_alphabet_{alphabet}{f"_counts_1_{max_count}" if max_count is not None else ""}.png",
+        "linear", 10, 6)
+
 def main():
     description = "Visualize the data from an experiment."
 
@@ -244,27 +334,66 @@ def main():
 
     if os.path.isfile(f"{result_dir}/compiled_data.npy"):
         # Load precompiled if it exists
-        mode_results = np.load(f"{result_dir}/compiled_data.npy", allow_pickle=True)
+        results = np.load(f"{result_dir}/compiled_data.npy", allow_pickle=True)
     else:
         # Compile and save
-        mode_results = compile_data(result_dir)
-        np.save(f"{result_dir}/compiled_data", mode_results, allow_pickle=True)
+        results = compile_data(result_dir)
+        np.save(f"{result_dir}/compiled_data", results, allow_pickle=True)
 
-
+    # reorder from decomp, DFA, cDFA to cDFA, decomp, DFA
+    new_indices = [2, 0, 1]
+    results = results[new_indices]
 
     os.makedirs(f"{graph_dir}", exist_ok=True)
 
-    color = ["blue", "orange", "black"]
-    for i, mode in enumerate(runner_modes.values()):
+    colors = ["tab:blue", "tab:orange", "tab:brown"]
+    state_nums = [3, 5, 7, 9]
+    alphabet_sizes = [3, 6]
+    max_counts = [2, 4, 8, 16]
 
-        x = np.arange(1, len(mode_results[i][-1].timeline) + 1)
-        y = mode_results[i][-1].nogoods
-        
-        plt.plot(x, y, color=color[i], label=f"{mode_results[i][-1].type}_{mode_results[i][-1].states}")
+    for alphabet in alphabet_sizes:
 
-    plt.legend()
+        # Compare number of solutions
+        for max_count in max_counts:
+            setup =  f"after running for 60s\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
+            plotByStatesAndWithoutX(results, lambda r: r.nSolutions, graph_dir,
+                                    "num_solutions", "Number of solutions",
+                                    setup, state_nums, alphabet, max_count, colors, None, 2, "dfa")
+        # Compare average nogood length
+        for max_count in max_counts:
+            setup =  f"after running for 60s\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
+            plotByStatesAndWithoutX(results, lambda r: r.averageLearnedNogoodLength[-1], graph_dir,
+                                    "avg_LearnedNogoodLength", "Average learned nogood length",
+                                    setup, state_nums, alphabet, max_count, colors, None, 2, "dfa")
 
-    plt.savefig(f"{graph_dir}/nogood_plot_test.png")
+        # Compare average number of propagations
+        for max_count in max_counts:
+            setup =  f"after running for 60s\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
+            plotByStatesAndWithoutX(results, lambda r: r.propagations[-1] / r.nSolutions, graph_dir,
+                                    "avg_propagations", "Average number of propagations per solution",
+                                    setup, state_nums, alphabet, max_count, colors, None, 1, "decomp")
+        #plotByCounts(results, lambda r: r.propagations[-1], graph_dir, "num_propagations", "Number of propagations", max_counts, alphabet, colors)
+
+        # Compare average number of nogoods
+        for max_count in max_counts:
+            setup =  f"after 60s\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
+            plotByStatesAndWithoutX(results, lambda r: r.nogoods[-1] / r.nSolutions, graph_dir,
+                                    "avg_nogoods", "Average number of nogoods per solution",
+                                    setup, state_nums, alphabet, max_count, colors, None, 1, "decomp")
+
+        # Compare peak depth
+        #plotByStates(results, lambda r: r.peakDepth[-1], graph_dir, "peak_depth", "Peak depth", setup, state_nums, alphabet, None, colors)
+        #plotByCounts(results, lambda r: r.peakDepth[-1], graph_dir, "peak_depth", "Peak depth", max_counts, alphabet, colors)
+
+        #setup =  f"after running for 60s\nwith |Σ|={alphabet}"
+
+
+
+    #print(f"{results[i][-1].type} time: {results[i][-1].timeline[0]}")
+    
+    # plt.plot(x, y, color=color[i], label=f"{results[i][-1].type}_{results[i][-1].states}")
+
+
 
     # plt.style.use('_mpl-gallery')
     #
