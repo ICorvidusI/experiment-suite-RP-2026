@@ -2,11 +2,21 @@
 * Typst template provided by Giovanni Grandi and adjusted by Daniël Ravensbergen.
 */
 
+#import "@preview/finite:0.5.1": automaton
+
 #let appendix(body) = {
   set heading(numbering: "A.1.1", supplement: [Appendix])
   counter(heading).update(0)
   body
 }
+
+#let exampleCounter = counter("example")
+#let example(it) = [
+  #set par(first-line-indent: 0em, spacing: 1.3em)
+  #exampleCounter.step()
+  *Example #context exampleCounter.display():*
+  #it #h(1fr) $ballot$
+]
 
 #set page(
   paper: "a4",
@@ -34,9 +44,9 @@
       height: auto,
       width: 10cm,
     )
-    #title("DFA vs cDFA for regular counting")
+    #title("Propagating regular counting with lazy clause generation")
 
-    #text(size: 14pt, weight: "semibold", " using regular constraints with lazy clause evaluation")
+    #text(size: 14pt, weight: "semibold", "When DFAs with a counter offer an advantage")
 
     #v(1cm)
     #[
@@ -74,13 +84,19 @@
 #pagebreak()
 #counter(page).update(1)
 #set par(justify: true, first-line-indent: 1em, spacing: 0.65em)
-
+#show figure: set block(spacing: 1cm)
+#show figure.caption: c => [
+  #text(weight: "bold")[
+    #c.supplement #c.counter.display(c.numbering)#c.separator
+  ]
+  #c.body
+]
 #[
   #show heading: it => align(center, it)
   #show par: it => block(inset: (left: 1cm, right: 1cm), it)
   #set heading(numbering: none)
   = Abstract
-  cDFA's offer a more natural encoding of counting regular patterns---a prevalent problem in timetabling and sequencing---than widely-used DFA's. A cDFA-based propagator for finite domain constraint solving has been shown to propagate more than the decomposition of a cDFA-based regular constraint. This paper extends that algorithm with explanations for lazy clause generation and shows that it is more efficient[briefly elaborate how] to model combinatorial problems with cDFA over DFA when [insert conditions of the cDFA].
+  cDFAs offer a more natural encoding of counting regular patterns---a prevalent problem in timetabling and sequencing---than widely-used DFAs. A cDFA-based propagator for finite domain constraint solving has been shown to propagate more than the decomposition of a cDFA-based regular constraint. This paper extends that algorithm with explanations for lazy clause generation and shows that it is more efficient[briefly elaborate how] to model combinatorial problems with cDFA over DFA when [insert conditions of the cDFA].
 /*
   The aim of this template is to make it more clear what is expected from you.
   #strong[ It is by no means required to follow this exact same structure. ]
@@ -113,7 +129,7 @@ Regular counting can be modeled for CP with the aforementioned regular constrain
 
 Up to now, this algorithm had not been implemented with explanations for Lazy Clause Generation (LCG)---a newer technology in the field of CP. It was also not clear for what sizes of cDFA it is beneficial to use this constraint over the readily available DFA-based regular constraints.
 
-This paper presents a cDFA based regular counting constraint with explanations. To this end we explain the explanations for propagating the count and variables in the input sequence and provide an exponential time algorithm for inference checking. In addition, we analyzes the performance of our constraint compared to two DFA-based regular constraints propagated respectively with decomposition and Gvosdiovas et al.$quote.r.single$s@gvozdiovas_nfa_2025 LCG implementation of Pesant's@pesant_regular_2004 propagator to show that it is beneficial to use our propagator when [Insert properties of cDFA]. We show why nonograms are a bad benchmark for this purpose and that generation of random cDFA's and equivalent DFA's is a good one.
+This paper presents the first cDFA based regular counting constraint with explanations. To this end we showcase the explanations for propagating the count and variables in the input sequence and provide an exponential time algorithm for inference checking. In addition, we analyze the performance of our constraint compared to two DFA-based regular constraints propagated respectively with decomposition and Gvosdiovas et al.$quote.r.single$s@gvozdiovas_nfa_2025 LCG implementation of Pesant's@pesant_regular_2004 propagator to show that it is beneficial to use our propagator when [Insert properties of cDFA]. We show why nonograms are a bad benchmark for this purpose and that generation of random cDFAs and equivalent DFAs is a good one.
 
 [Insert additional relevant results]
 
@@ -134,13 +150,13 @@ The algorithms that make such deductions are called #strong[propagators], prunin
 There are two approaches to propagating a constraint. One is to use an algorithm designed for that specific constraint. The other is to decompose the constraint into many _simpler_ constraints with _simpler_ propagators. When deciding which algorithm or decomposition to use, it is worth considering the trade-off between strength---_how many_ propagations are applied and _how useful_ are they---and speed---_how fast_ are propagations computed.
 
 Two relevant concepts that apply to propagators are #strong[bounds consistency] and #strong[domain consistency].
-A propagator is #strong[bounds consistent] when, if you apply it sequentially, it doesn't propagate on the _bounds_ of the domain more than once; It has made all the deductions it can regarding the bounds.
-A propagator is #strong[domain consistent] when, if you apply it sequentially, it doesn't propagate on the domain more than once; It has made all the deductions it can.
+A propagator is #strong[bounds consistent] when, if you apply it sequentially, it doesn't propagate on the _bounds_ of the domain more than once; it has made all the deductions it can regarding the bounds.
+A propagator is #strong[domain consistent] when, if you apply it sequentially, it doesn't propagate on the domain more than once; it has made all the deductions it can.
 
 == Lazy Clause Generation <lcg>
 
 Lazy clause generation (LCG) is an extension to FD constraint solvers based on solvers from the subdomain of Boolean CP: satisfiability-solvers (SAT-solvers).
-SAT-solvers are able to solve Boolean satisfiability problems; Given a set of variables and a set of Boolean clauses, they find an assignments of the variables that makes all clauses true.
+SAT-solvers are able to solve Boolean satisfiability problems; given a set of variables and a set of Boolean clauses, they find an assignments of the variables that makes all clauses true.
 SAT-solvers are able to make use of #strong[conflict learning], something FD constraint solvers can not do. When a conflict occurs, they can deduce which decisions resulted in that conflict from the clauses in an implication graph. The negation of the clause that represents that decision---also referred to as a #strong[nogood]---is then added as a new constraint. This is especially useful for searching large domains.
 
 LCG adds advantages of SAT-solvers---like #strong[conflict learning]---to FD constraint solvers. It does this by making propagations provide Boolean clauses for both the reason for propagation and the propagation itself. This combination of reason and propagation is called an #strong[explanation]. Generally, the _shorter_ the #strong[explanation], the more useful it is, as the more clauses you add to the reason, the less generalizable it is to the rest of the search space. Because of this, LCG is known to often learn more from decomposition into smaller constraints, compared to more complex propagators@feydy_lazy_2009.
@@ -162,13 +178,38 @@ Where:\
 + $q_0 in Q$ is the _initial state_;
 + $F subset.eq Q$ is the _set of accept states_.
 \
+#figure(
+  automaton(
+    (
+      q0: (q0: 1, q1: 0),
+      q1: (q1: 0, q2: 1),
+      q2: (q2: (0, 1)),
+    ),
+    initial: "q0",
+    final: ("q2"),
+    layout: (
+      q0: (0, 0),
+      q1: (rel: (3, 0)),
+      q2: (rel: ()),
+    ),
+    style: (
+      q0: (initial: (label: "")),
+    ),
+  ),
+  caption: [DFA that accepts the sequence "01"],
+) <example-dfa>
+
 Given a finite sequence $X$, where for each $x_i in X: x_i in Sigma$, a DFA accepts $X$ iff it is in an accepting state after consuming $X$. That is: starting in $q_0$ ($q <- q_0$), for each $x_i in X$ in order, go from one state to the next, according to $delta$;\
 $
 q' = delta""(q, x_i): q <- q'
 $
 
+#example[
+  Consider the DFA in @example-dfa. When given the string "01", it will visit the following states in order: $q_0 -> q_1 -> q_2$. The final state it ends up in is $q_2$, which is an accept state; the DFA accepts.
+]
+
 === cDFA
-Beldiceanu et al.@beldiceanu_propagating_2013 describes a subclass of counter-DFA's (cDFA). When referring to cDFA's in this paper, we mean this specific subclass. It is similar to a DFA, but differs in two aspects: It only has accepting states; It has a singular counter that is initialized to zero and increments on certain transitions. In this paper it is defined by the five-tuple:\
+Beldiceanu et al.@beldiceanu_propagating_2013 describes a subclass of counter-DFAs (cDFA). When referring to cDFAs in this paper, we mean this specific subclass. It is similar to a DFA, but differs in two aspects: It only has accepting states; it has a singular counter that is initialized to zero and increments on certain transitions. In this paper it is defined by the five-tuple:\
 $
 chevron.l Q, Sigma, delta, q_0, K chevron.r
 $
@@ -179,11 +220,37 @@ Where:\
 + $q_0 in Q$ is the _initial state_;
 + $K subset.eq NN$ is the _set of accepted counts_.
 \
+#figure(
+  automaton(
+    (
+      q0: (q0: 1, q1: 0),
+      q1: (q1: 0, q2: ("1{k\u{2190}k+1}")),
+      q2: (q2: (0, 1)),
+    ),
+    initial: "q0",
+    final: ("q0", "q1", "q2"),
+    layout: (
+      q0: (0, 0),
+      q1: (rel: (3, 0)),
+      q2: (rel: ()),
+    ),
+    style: (
+      q0: (initial: (label: "{k\u{2190}0}")),
+    ),
+  ),
+  caption: [cDFA with $K = {1}$ that accepts the sequence "01"],
+) <example-cdfa>
+
 Given a finite sequence $X$, where for each $x_i in X "s.t." x_i in Sigma$, a DFA accepts $X$ iff its counter has an accepting count after consuming $X$. That is: starting in $q_0$ ($q <- q_0$), with counter $k$ initialized to zero ($k <- 0$), for each $x_i in X$ in order, go from one state to the next and increment $k$ with the count of the transition, according to $delta$;\
 $
 chevron.l q', italic("inc") chevron.r = delta""(q, x_i): q <- q', k <- k + italic("inc")
 $
 For ease of notation, when $delta""(q, cal(l)) = chevron.l q', italic("inc") chevron.r : delta_Q""(q, cal(l)) = q' "and" delta_NN""(q, cal(l)) = italic("inc") $
+
+#example[
+  Consider the cDFA in @example-cdfa. When given the string "01", it will visit the following states in order: $q_0 -> q_1 -> q_2$. It increments by one when going from $q_1$ to $q_2$. The final count is one, which is an accepted count; the cDFA accepts.
+]
+
 
 == cDFA based constraint <cdfa_constraint>
 === Definition
@@ -195,7 +262,7 @@ where:\
 - $italic("dom")(italic("var"))$ is the domain of variable _var_;
 - $X$ is a sequence of variables $x_1 ... x_n$, $italic("dom")(x_i) subset.eq Sigma$;
 - $A$ is a cDFA;
-- $italic("count")$ is a variable, with $italic("dom")(italic("count")) subset.eq NN$;
+- $italic("count")$ is a variable, with $italic("dom")(italic("count"))$ as the set of accepting counts of A;
 The constraint is satisfied when $A$ counts to _count_ when consuming sequence $X$.
 
 === Propagating the cDFA based constraint
@@ -205,40 +272,76 @@ To explain the propagation proposed by@beldiceanu_propagating_2013 we need to st
 - $underline("QCF")(i)$ (and $overline("QCF")(i)$): The set of pairs $chevron.l q, c chevron.r$, where $c$ is the minimum (maximum) counter increase to reach state $q$.
 - $underline("QCB")(i)$ (and $overline("QCB")(i)$): The set of pairs $chevron.l q, c chevron.r$, where $c$ is the minimum (maximum) counter increase to reach a final state from state $q$.
 
-Using the following two functions to respectively keep only the tuples with the minimum and maximum cost for a given state:
+For polynomial time algorithms for $underline("QCF")(i)$, $overline("QCF")(i)$, $underline("QCB")(i)$ and $overline("QCB")(i)$, see @math-definitions.
 
-$
-&"trimMin"(S) &= { chevron.l q, c chevron.r in S | exists.not chevron.l q, c' chevron.r in S : c' < c}\
-&"trimMax"(S) &= { chevron.l q, c chevron.r in S | exists.not chevron.l q, c' chevron.r in S : c' > c}
-$
-$underline("QCF")(i)$, $overline("QCF")(i)$, $underline("QCB")(i)$ and $overline("QCB")(i)$ can be implemented inductively:
-$
-underline("QCF")(i) &= cases(
-  {chevron.l q_0, 0 chevron.r} &&&"if" i = 0,
-  "trimMin"(&{ chevron.l delta_Q""(q, cal(l)), c + delta_NN""(q, cal(l)) chevron.r &| chevron.l q, c chevron.r in underline("QCF")(i - 1), cal(l) in italic("dom")(x_i)}) &"if" i in [1,n],
-)\
+#figure(
+  automaton(
+    (
+      q0: (q0: 1, q1: 0, q2: 2),
+      q1: (q1: 0, q2: ("1{k\u{2190}k+1}"), q3: "2{k\u{2190}k+1}"),
+      q2: (q1: 2, q2: (0, 1)),
+      q3: (q0: "2{k\u{2190}k+2}", q2: (0, 1)),
 
-overline("QCF")(i) &= cases(
-  {chevron.l q_0, 0 chevron.r} &&&"if" i = 0,
-  "trimMax"(&{ chevron.l delta_Q""(q, cal(l)), c + delta_NN""(q, cal(l)) chevron.r &| chevron.l q, c chevron.r in overline("QCF")(i - 1), cal(l) in italic("dom")(x_i)}) &"if" i in [1,n],
-)\
+    ),
+    initial: "q0",
+    final: ("q0", "q1", "q2", "q3"),
+    layout: (
+      q0: (0, 0),
+      q1: (rel: (0, 4)),
+      q2: (rel: (4, 0)),
+      q3: (rel: (0, -4)),
+    ),
+    style: (
+      q0: (initial: (label: "{k\u{2190}0}")),
+      q0-q0: (anchor: bottom),
+      q2-q1: (curve: 0),
+      q1-q3: (curve: -.5, label: (pos: .3)),
+      q0-q2: (curve: -.5, label: (pos: .1)),
+      q3-q2: (curve: -1, label: (dist: -.33)),
+    ),
+  ),
+  caption: [cDFA with $Sigma = {0, 1, 2} $ and $K = {2, 3, 4}$],
+) <cdfa-for-propagation>
 
-underline("QCB")(i) &= cases(
-  {chevron.l q, 0 chevron.r &&| exists c in NN : chevron.l q, c chevron.r in underline("QCB")(i) } &"if" i = n + 1,
-  "trimMin"(&{ chevron.l q, c' + italic("inc") chevron.r &| chevron.l q', c' chevron.r in underline("QCB")(i + 1), cal(l) in italic("dom")(x_i), delta(q, cal(l)) = chevron.l q', italic("inc") chevron.r}) &"if" i in [1,n],
-)\
+#example[
+  We will demonstrate the behaviour of $"QCF"(i)$.
+  Consider the cDFA in @cdfa-for-propagation. Given an arbitrary sequence $X$ of $n=4$ variables with $Sigma$ as domain, we have:
+  $
+  &"QCF"(0) &&= {chevron.l q_0, {0} chevron.r}\
+  &"QCF"(1) &&= {chevron.l q_0, {0} chevron.r, chevron.l q_1, {0} chevron.r, chevron.l q_2, {0} chevron.r}\
+  &"QCF"(2) &&= {chevron.l q_0, {0} chevron.r, chevron.l q_1, {0} chevron.r, chevron.l q_2, {0, 1} chevron.r, chevron.l q_3, {1} chevron.r}\
+  &"QCF"(3) &&= {chevron.l q_0, {0, 3} chevron.r, chevron.l q_1, {0, 1} chevron.r, chevron.l q_2, {0, 1} chevron.r, chevron.l q_3, {1} chevron.r}\
+  &"QCF"(4) &&= {chevron.l q_0, {0, 3} chevron.r, chevron.l q_1, {0, 1, 3} chevron.r, chevron.l q_2, {0, 1, 2, 3} chevron.r, chevron.l q_3, {1, 2} chevron.r}
+$
+]
 
-overline("QCB")(i) &= cases(
-  {chevron.l q, 0 chevron.r &&| exists c in NN : chevron.l q, c chevron.r in overline("QCB")(i) } &"if" i = n + 1,
-  "trimMax"(&{ chevron.l q, c' + italic("inc") chevron.r &| chevron.l q', c' chevron.r in overline("QCB")(i + 1), cal(l) in italic("dom")(x_i), delta(q, cal(l)) = chevron.l q', italic("inc") chevron.r}) &"if" i in [1,n],
-)\
+#example[
+  We will demonstrate the behaviour of $"QCB"(i)$.
+  Consider the cDFA in @cdfa-for-propagation. Given an arbitrary sequence $X$ of $n=4$ variables with $Sigma$ as domain, we have:
+  $
+  &"QCB"(5) &&= {chevron.l q_0, {0} chevron.r, chevron.l q_1, {0} chevron.r, chevron.l q_2, {0} chevron.r, chevron.l q_3, {0} chevron.r}\
+  &"QCB"(4) &&= {chevron.l q_0, {0} chevron.r, chevron.l q_1, {0, 1} chevron.r, chevron.l q_2, {0} chevron.r, chevron.l q_3, {0, 2} chevron.r}\
+  &"QCB"(3) &&= {chevron.l q_0, {0, 1} chevron.r, chevron.l q_1, {0, 1, 3} chevron.r, chevron.l q_2, {0, 1} chevron.r, chevron.l q_3, {0, 2} chevron.r}\
+  &"QCB"(2) &&= {chevron.l q_0, {0, 1, 3} chevron.r, chevron.l q_1, {0, 1, 2, 3} chevron.r, chevron.l q_2, {0, 1, 3} chevron.r, chevron.l q_3, {0, 1, 2, 3} chevron.r}\
+  &"QCB"(1) &&= {chevron.l q_0, {0, 1, 2, 3} chevron.r, chevron.l q_1, {0, 1, 2, 3, 4} chevron.r, chevron.l q_2, {0, 1, 2, 3} chevron.r, chevron.l q_3, {0, 1, 2, 3, 5} chevron.r}\
 $
-Propagation on the bounds of $italic("count")$ can then be implemented as:
-$
-italic("dom")(italic("count")) gt.eq &italic("min")(c) &| chevron.l q, c chevron.r in underline("QCF")(n)\
+]
 
-italic("dom")(italic("count")) lt.eq &italic("max")(c) &| chevron.l q, c chevron.r in overline("QCF")(n)\
+Propagation on the bounds of $italic("count")$ can be implemented as:
 $
+italic("count") gt.eq &italic("min")(c) &| chevron.l q, c chevron.r in underline("QCF")(n)\
+
+italic("count") lt.eq &italic("max")(c) &| chevron.l q, c chevron.r in overline("QCF")(n)\
+$
+
+#example[
+  We will show a propagation on the upper bound of $italic("count")$.
+  Consider the cDFA with $K={2, 3, 4}$ in @cdfa-for-propagation. Given an arbitrary sequence $X$ of $n=4$ variables with $Sigma$ as domain, we have:
+  + $overline("QCF")(4) &&= {chevron.l q_0, {3} chevron.r, chevron.l q_1, {3} chevron.r, chevron.l q_2, {3} chevron.r, chevron.l q_3, {2} chevron.r}$
+  + $italic("max")(c) = 3$
+  + $italic("count") lt.eq 3$
+  + $italic("dom")(italic("count")) = {2, 3}$
+]
 
 To implement propagation for variables in $X$, a value $cal(l)$ is removed from the domain of $x_i$ iff:\
 
@@ -250,8 +353,21 @@ chevron.l q'\, italic("inc") chevron.r = delta""(q, cal(l)),
 chevron.l q'\, underline(c') chevron.r in underline("QCB")(i + 1),
 chevron.l q'\, overline(c') chevron.r in overline("QCB")(i + 1)
 ))
-:[underline(c) + italic("inc") + underline(c'), overline(c) + italic("inc") + overline(c')] inter italic("dom")(italic("Count")) = emptyset\
+:[underline(c) + italic("inc") + underline(c'), overline(c) + italic("inc") + overline(c')] inter italic("dom")(italic("count")) = emptyset\
 $
+
+#example[
+  We will show how to derive the propagation $x_3 eq.not 2$.
+  Consider the cDFA in @cdfa-for-propagation, but now with  with $K={4, 5, 6}$. For each state we have listed the ranges\
+  $[underline(c) + italic("inc") + underline(c'), overline(c) + italic("inc") + overline(c')]$:
+  $
+  q_0:[0 + 0 + 0, 0 + 0 + 0] = [0, 0]\
+  q_1:[0 + 1 + 0, 0 + 1 + 2] = [1, 3]\
+  q_2:[0 + 0 + 0, 1 + 0 + 1] = [0, 2]\
+  q_3:[1 + 2 + 0, 1 + 2 + 0] = [3, 3]\
+  $
+  The intersection of each range with $italic("dom")(italic("count"))$ is $emptyset$, thus $x_3 eq.not 2$.
+  ]
 
 // = Methodology, Background, Problem Description
 /*
@@ -274,22 +390,22 @@ Do not forget to give this section another name, for example after the problem y
 
 = Related work <related_work>
 
-Constraint solving was originally proposed by Lauriere@lauriere_language_1978, as an approach to solve combinatorial problems. Later, Jaffar and Lassez@jaffar_constraint_1987 coined constraint logic programming as an extension. One of its capabilities was finite domain (FD) constraint solving. It improved the ease of modeling combinatorial problems.
-
-Lazy clause generation (LCG) was proposed by Ohrimenko et al.@ohrimenko_propagation_2007. It implemented FD propagation in a SAT-solver, effectively combining the advantages of FD constraint solving and SAT-solving. LCG was then re-engineered by Feydy and Stuckey@feydy_lazy_2009, by implementing a SAT-solver as a propagator inside a FD solver and having other propagators generate explanations to populate it with. It proved more efficient for large search spaces and boosted the performance of decomposition into global constraints, as FD constraint solvers extended with LCG can make use of conflict-learning.
+// Constraint solving was originally proposed by Lauriere@lauriere_language_1978, as an approach to solve combinatorial problems. Later, Jaffar and Lassez@jaffar_constraint_1987 coined constraint logic programming as an extension. One of its capabilities was finite domain (FD) constraint solving. It improved the ease of modeling combinatorial problems.
+//
+// Lazy clause generation (LCG) was proposed by Ohrimenko et al.@ohrimenko_propagation_2007. It implemented FD propagation in a SAT-solver, effectively combining the advantages of FD constraint solving and SAT-solving. LCG was then re-engineered by Feydy and Stuckey@feydy_lazy_2009, by implementing a SAT-solver as a propagator inside a FD solver and having other propagators generate explanations to populate it with. It proved more efficient for large search spaces and boosted the performance of decomposition into global constraints, as FD constraint solvers extended with LCG can make use of conflict-learning.
 
 The DFA based regular constraint and an accompanying domain consistent propagator were originally proposed by Pesant@pesant_regular_2004. Gvosdiovas et al.@gvozdiovas_nfa_2025 recently created a version of Pesant's propagator with explanations for LCG and extended it to work with non-deterministic finite automata (NFA). As we also extend a propagator with explanations for LCG, this research was influential in how we approached our research. A comparison between their NFA-based constraint and our cDFA-based constraint does not seem useful to us, as we can't think of ways that non-determinism provides significant advantages for regular counting.
 
-Using cDFA's for regular counting was originally proposed by Beldiceanu et al.@beldiceanu_deriving_2004, as the use of a counter allows for a simpler representation to count regular patterns opposed to normal DFA's. Later, Beldiceanu et al.@beldiceanu_propagating_2013 proposed propagators for "at least", "at most" and "exact" counting of regular patterns using cDFA's, that are domain consistent on the input sequence. Their "at most" and "at least" propagators were shown to also be domain consistent on the count, whereas their "exact" propagator only provides bounds consistency. They further proved that computing satisfiability for their "exact" constraint is NP-Hard.
+Using cDFAs for regular counting was originally proposed by Beldiceanu et al.@beldiceanu_deriving_2004, as the use of a counter allows for a simpler representation to count regular patterns opposed to normal DFAs. Later, Beldiceanu et al.@beldiceanu_propagating_2013 proposed propagators for "at least", "at most" and "exact" counting of regular patterns using cDFAs, that are domain consistent on the input sequence. Their "at most" and "at least" propagators were shown to also be domain consistent on the count, whereas their "exact" propagator only provides bounds consistency. They further proved that computing satisfiability for their "exact" constraint is NP-Hard.
 
 Although they show that their propagators prune more than decomposition of a DFA-based regular constraint, they only show this for FD constraint solving _without_ LCG. This poses the question if that is still the case when implemented _with_ LCG, which can benefit from decomposition. Another question left unanswered is for what sizes of cDFA it offers an significant advantage to model problems with them. Our research answers these questions.
 
-Martin and Pearson@martin_when_2022 provided an algorithm that decides when bounds consistency implies domain consistency for a given cDFA. This also analyzes when cDFA's are more efficient, but does so by analyzing their structure in stead of their size and provides no comparison with DFA's.
+Martin and Pearson@martin_when_2022 provided an algorithm that decides when bounds consistency implies domain consistency for a given cDFA. This also analyzes when cDFAs are more efficient, but does so by analyzing their structure in stead of their size and provides no comparison with DFAs.
 
 The cost-regular constraint proposed by Demassey et al.@demassey_cost-regular_2006 has many similarities---both accumulate values when taking transitions in finite automata and compare the accumulation to a variable---to the regular counting constraint proposed by Beldiceanu et al.@beldiceanu_propagating_2013, but propagates less and has asymptotically worse space complexity. No comparison of these two propagators extended with explanations for LCG has also not been done as well, but due to the limited scope of our research, we left this untouched.
 
 = Propagating regular_cDFA with explanations <contributions>
-This section showcases our contributions. @explanations explains our explanations for propagating and the accompanying inference checker, and @benchmarks describes the approach to compare the constraints.
+This section showcases our contributions. @explanations showcases our explanations for propagating and the accompanying inference checker, and @benchmarks describes the approach to compare the constraints.
 
 == Explanations <explanations>
 These explanations are directly based on the propagations from Beldiceanu et al.@beldiceanu_propagating_2013. As such, they are trivial, but lay the groundwork for future improvements.
@@ -302,7 +418,7 @@ $
 The clauses making up the reason for propagating on _count_ represent the domains of the variables in $X$. All $c in italic("dom")(italic("count"))$ are independent from each other.
 
 === The input sequence
-The propagation clause for the variables in $X$ is an inequality clause:\
+The propagation clauses for the variables in $X$ are unit clauses for each value that is impossible:\
 $
 [x_i eq.not italic("value")]
 $ 
@@ -319,23 +435,28 @@ chevron.l q'\, overline(c') chevron.r in overline("QCB")(i + 1)
 $
 
 === Inference checker
-When implementing an inference checker for $"regular_cDFA"(X, A, italic("count"))$, there is one unfortunate fact; Computing satisfaction for regular_cDFA is an NP-Hard problem, as Beldiceanu et al.@beldiceanu_propagating_2013 have proven by reduction from SAT. This means that it is hard to calculate if the constraint is still satisfied. We have nonetheless implemented an algorithm and were able to verify our explanation for small instances using it. Bigger instances quickly lead to the program not completing.
+When implementing an inference checker for $"regular_cDFA"(X, A, italic("count"))$, there is one unfortunate fact; computing satisfaction for regular_cDFA is an NP-Hard problem, as Beldiceanu et al.@beldiceanu_propagating_2013 have proven by reduction from SAT. This means that it is hard to calculate if the constraint is still satisfied. We have nonetheless implemented an algorithm and were able to verify our explanation for small instances using it. Bigger instances quickly lead to the program not completing.
 
 Our inference checker first computes the set of all possible counts after consuming $X$, $"QCF"(n)$, given the explanation. It then checks if there exists a $c in italic("dom")(italic("count"))$, such that $c in "QCF"(n)$. If that is the case, the constraint is still satisfied.
 
 == Benchmarks <benchmarks>
-In an attempt to show when our cDFA-based propagator offers advantages over DFA based ones, we considered two benchmarks. Our initial plan was based on modelling nonograms, but we found that that does not exploit advantages of cDFA-based propagation meaningfully. We then pivoted to generating random cDFA's and equivalent DFA's.
+In an attempt to show when our cDFA-based propagator offers advantages over DFA based ones, we considered two benchmarks. Our initial plan was based on modelling nonograms, but this proved impractical. We decided to elaborate on why nonograms are a poor problem to model with cDFAs, to helps future research avoid this approach and give insight into what types of problems are unlikely to benefit from being modeled with cDFA. We also explain why generating random cDFAs and equivalent DFAs is a good benchmark.
 //The performance of the regular_cDFA constraint, the DFA-based regular constraint and its decomposition were benchmarked.
 // Performance was assessed based on runtime, conflicts, propagations and amount of states of the finite automata.
 
 === Nonograms
-Nonograms are well-known puzzles. They consist of an empty grid, where each row and column has a "hint"---a list of numbers---that corresponds to what squares in the row or column can be filled. Each number $n$ in the hint corresponds to a subsequence of $n$ filled in squares; The subsequences occur in order; Subsequences are separated by at least one empty square.
+Nonograms are well-known puzzles. See @nonogram for an example. They consist of an empty grid, where each row and column has a "hint"---a list of numbers---that corresponds to what squares in the row or column can be filled. Each number $n$ in the hint corresponds to a subsequence of $n$ filled in squares; the subsequences occur in order; subsequences are separated by at least one empty square.
 
-As this problem relies on patterns that count, it seems like a good fit to model with cDFA's. And yes, it is possible to model the hints for the rows and columns with regular counting; a given hint $[k, m, n]$ can be modeled by the regular expression "$0^* 1{k} 0⁺ 1{m} 0^+ 1{n} 0^*$". There are two problems when modeling with cDFA's however.
+#figure(
+  [WIP],
+  caption: [An example of a nonogram]
+)<nonogram>
+
+As this problem relies on patterns that count, it seems like a good fit to model with cDFAs. And yes, it is possible to model the hints for the rows and columns with regular counting; a given hint $[k, m, n]$ can be modeled by the regular expression "$0^* 1{k} 0⁺ 1{m} 0^+ 1{n} 0^*$". There are two problems when modeling with cDFAs however.
 
 First of all, the count of a subsequence is always a fixed value, whereas regular_cDFA is able to propagate on the count. This means modeling nonograms does not exploit an advantage of cDFA.
 
-Second of all, there are multiple patterns that are counted. This poses the biggest problem. cDFA's only have one counter. As such, nonograms can not be trivially modeled using cDFA's in a way that results in a smaller encoding than when modeled with a DFA.
+Second of all, there are multiple patterns that are counted. This poses the biggest problem. cDFAs only have one counter. As such, nonograms can not be trivially modeled using cDFAs in a way that results in a smaller encoding than when modeled with a DFA.
 
 There is one approach however. If a cDFA increments by at most one, the maximum count after consuming a sequence of $n$ values is $n$. To implement a second counter, whose count can be distinguished from the first, edges incrementing by $n+1$ can thus be used. An accepting count can then be encoded as:
 $
@@ -345,9 +466,16 @@ This can be generalized for $k$ counters as:
 $
 sum_(i=1)^k (n+1)^(i-1) dot italic("count"_i)
 $
-Note that this essentially represents each count as a digit in a base $n+1$ number.
+Note that this essentially represents each count as a digit in a base $n+1$ number. See @nonogram-automata for examples of each approach.
 
-[Insert image of trivial cDFA, encoded cDFA and DFA models describing the same hint]
+#figure(
+  grid(columns: 3, row-gutter: 2mm, column-gutter: 1mm,
+
+    block[WIP], block[WIP], block[WIP],
+
+  "a) Trivial cDFA", "b) Encoded cDFA", "c) DFA"),
+  caption: [Three ways to represent the hint [2, 3]]
+)<nonogram-automata>
 
 This introduces a new problem however: The accepting count grows exponentially proportional to the amount of encoded counts. For small nonograms, this is no issue, as they have small sequences and consequently a small amount of numbers per hint. As nonograms grow in size however, so do their sequences and consequently the amount of numbers per hint. For a 30x30 nonogram, that thus has sequences of length 30, it is not uncommon to see hints with seven or more numbers. As $31^7 gt 2^32$, the accepting counts used to model larger nonograms are unable to be represented by either signed or unsigned 32-bit integers.
 
@@ -357,33 +485,135 @@ These two factors---having a single count per sequence and exponential blowup of
 // _
 
 === Random equivalent constraints
-We decided to use randomly generated equivalent DFA and cDFA to benchmark instead. This tackles both issues with the previous approach by generating finite automata that count only one pattern and have multiple accepting counts. We achieve this in the following three steps:
-+ We first construct a random incomplete intermediate DFA.
-+ We convert the intermediate DFA to a cDFA.
-+ We use the incomplete DFA to construct a DFA that is equivalent to the generated cDFA, that is then minimized.
+We decided to use randomly generated equivalent DFA and cDFA to benchmark. This will allow us to benchmark cDFAs in general in stead of ones used to model a specific problem.
+Additionally, this tackles both issues with the nonogram approach by generating finite automata (FA) that count only one pattern and have multiple accepting counts. We achieve this in the following three steps:
++ We first construct a random intermediate FA.
++ We convert the intermediate FA to a cDFA.
++ We use the intermediate FA to construct a DFA that is equivalent to the generated cDFA, that is then minimized.
 
 To work with the DFA and to minimize the equivalent DFA, the python library FAdo#footnote[https://fado.dcc.fc.up.pt/]<fado> was used.
 
-=== Constructing the intermediate DFA
-A DFA with $n+1$ states and only one accepting state---where $n$ is the amount of states our resulting cDFA will end up with---is generated randomly.
-This is done in a way that a random Hamiltonian path from the starting state to the accept state exists, to guarantee that the resulting automata accept some sequences. The accept state is incomplete; It does not have any outgoing edges.
+==== Constructing the intermediate finite automaton
+A finite automaton with $n+1$ states and only one accepting state---where $n$ is the amount of states our resulting cDFA will end up with---is generated randomly. See @intermediate-fa.
+This is done in a way that a random Hamiltonian path---marked with red for illustration---from the starting state to the accept state exists, to guarantee that the resulting automata accept some sequences. The accept state is incomplete; it does not have any outgoing edges. A set of accepting counts $K$ is defined.
 
-[Insert image of an example intermediate DFA]
+#figure(
+  automaton(
+    (
+      q0: (q1: 1, q2: 0),
+      q1: (q2: 0, q0: 1),
+      q2: (),
+    ),
+    initial: "q0",
+    final: ("q2"),
+    layout: (
+      q0: (0, 0),
+      q1: (rel: (2, 2)),
+      q2: (rel: (2, -2)),
+    ),
+    style: (
+      q0: (initial: (label: "")),
+      q0-q2: (curve: 0),
+      q0-q1: (curve: .3, stroke: red),
+      q1-q0: (curve: .3),
+      q1-q2: (curve: .3, stroke: red),
+    ),
+  ),
+  caption: [Intermediate finite automaton, $K={1, 3}$],
+) <intermediate-fa>
 
-=== Constructing the cDFA
-The ingoing edged to the accept state of the intermediate DFA are marked as incrementing by one. The accept state is merged with the starting state. All states are made accepting.
+==== Constructing the cDFA
+The ingoing edges to the accept state of the intermediate DFA are marked as incrementing by one. The accept state is merged with the starting state. All states are made accepting.
 
-[Insert image of cDFA generated from example intermediate DFA]
+#figure(
+  automaton(
+    (
+      q2: (),
+      q0: (q1: 1, q2: "0{k\u{2190}k+1}"),
+      q1: (q2: "0{k\u{2190}k+1}", q0: 1),
+    ),
+    initial: "q0",
+    final: ("q0", "q1","q2"),
+    layout: (
+      q2: (0, 0),
+      q0: (0, 0),
+      q1: (rel: (4, 0)),
+    ),
+    style: (
+      q0: (initial: (label: "{k\u{2190}0}")),
+      q0-q2: (curve: 0),
+      q0-q1: (curve: 1, stroke: red),
+      q1-q0: (curve: 0),
+      q1-q2: (curve: 1, stroke: red),
+    ),
+  ),
+  caption: [Constructed cDFA, $K={1, 3}$],
+) <constructed-cdfa>
 
-=== Constructing the equivalent DFA
-From the intermediate DFA $italic("max")(italic("counts")) + 1$ copies are made.
+==== Constructing the equivalent DFA
+From the intermediate DFA $italic("max")(K) + 1$ copies are made.
 $
-{ italic("copy"_i) | i in 0, 1, ..., italic("max")(italic("counts"))}
+{ italic("copy"_i) | i in 0, 1, ..., italic("max")(K)}
 $
-Each accepting state of $italic("copy"_i)$ is merged with the starting state of $italic("copy"_(i+1))$ , essentially concatenating the pattern $italic("max")(italic("counts")) + 1$ times.
-The final incomplete state is made into a rejecting trap-state. States corresponding to the rejecting states of $italic("copy"_i)$ are accepting iff $i in italic("counts")$.
+Each accepting state of $italic("copy"_i)$ is merged with the starting state of $italic("copy"_(i+1))$ , essentially concatenating the pattern $italic("max")(K) + 1$ times.
+The final incomplete state is made into a rejecting trap-state. States corresponding to the rejecting states of $italic("copy"_i)$ are accepting iff $i in K$. See @equivalent-dfa. The resulting DFA is then minimized with Hopcroft's method using FAdo@fado.
 
-[Insert images of cDFA being created by first concatenating the copies and then setting the accepting states.]
+#figure(
+  automaton(
+    (
+      q00: (q01: 1, q02: 0),
+      q01: (q02: 0, q00: 1),
+      q02: (),
+      q10: (q11: 1, q12: 0),
+      q11: (q12: 0, q10: 1),
+      q12: (),
+      q20: (q21: 1, q22: 0),
+      q21: (q22: 0, q20: 1),
+      q22: (),
+      q30: (q31: 1, q32: 0),
+      q31: (q32: 0, q30: 1),
+      q32: (q32: (0, 1)),
+
+    ),
+    initial: "q00",
+    final: ("q10", "q11", "q30", "q31"),
+    layout: (
+      q00: (0, 0),
+      q01: (rel: (2, 2)),
+      q02: (rel: (2, -2)),
+      q10: (rel: (0, 0)),
+      q11: (rel: (2, 2)),
+      q12: (rel: (2, -2)),
+      q20: (rel: (0, 0)),
+      q21: (rel: (2, 2)),
+      q22: (rel: (2, -2)),
+      q30: (rel: (0, 0)),
+      q31: (rel: (2, 2)),
+      q32: (rel: (2, -2)),
+    ),
+    style: (
+      q00: (initial: (label: "")),
+      q32-q32: (anchor: top+right),
+      q00-q02: (curve: 0),
+      q00-q01: (curve: .3, stroke: red),
+      q01-q00: (curve: .3),
+      q01-q02: (curve: .3, stroke: red),
+      q10-q12: (curve: 0),
+      q10-q11: (curve: .3, stroke: red),
+      q11-q10: (curve: .3),
+      q11-q12: (curve: .3, stroke: red),
+      q20-q22: (curve: 0),
+      q20-q21: (curve: .3, stroke: red),
+      q21-q20: (curve: .3),
+      q21-q22: (curve: .3, stroke: red),
+      q30-q32: (curve: 0),
+      q30-q31: (curve: .3, stroke: red),
+      q31-q30: (curve: .3),
+      q31-q32: (curve: .3, stroke: red),
+    ),
+  ),
+  caption: [Equivalent DFA],
+) <equivalent-dfa>
 
 
 /*
@@ -409,9 +639,9 @@ Make clear what your contribution is here: a new organization of the literature,
 */
 
 = Experimental Setup and Results <results>
-Our results show that for cDFA's with [insert qualities of cDFA's], it is more effective to use the regular_cDFA constraint with our propagator than a regular constraint with Gvosdiovas et al.$quote.r.single$s@gvozdiovas_nfa_2025 propagator.
+Our results show that for cDFAs with [insert qualities of cDFAs], it is more effective to use the regular_cDFA constraint with our propagator than a regular constraint with Gvosdiovas et al.$quote.r.single$s@gvozdiovas_nfa_2025 propagator.
 
-Our results show that for cDFA's with [insert qualities of cDFA's], it is more effective to use the regular_cDFA constraint with our propagator than a decomposed regular constraint with Gvosdiovas.
+Our results show that for cDFAs with [insert qualities of cDFAs], it is more effective to use the regular_cDFA constraint with our propagator than a decomposed regular constraint with Gvosdiovas.
 
 [Insert additional relevant result summary]
 /*
@@ -432,8 +662,45 @@ This approach was inspired by Gvosdivas et al.. An important change is that we o
 
 The benchmarks were run on a laptop with [Insert specs] running NixOS without a graphical user interface, to minimize background processes.
 
+#figure(
+  table(),
+  caption: [TODO]
+)<configurations>
+
+Five randomly generated instances of our benchmark were run for 60 seconds, for each configuration of counts, alphabet size and amount of states. The different configurations can be found in @configurations. The length of the sequence of an instance equals the amount of states times the maximum count plus one. This way, there exists a sequence which counts past the maximum count.
+
+For each configuration the following metrics were compared:
+- Number of solutions;
+- Average propagation per solution;
+- Average nogoods per solution;
+- Average learned nogood length;
+
 == Results
-[Show box plots containing amount of states of the finite automata, amount of propagations, solve speed and the number of conflicts. Grouped by cDFA, Pesant DFA and decomposed DFA. Also group by parameters such as amount of states, alphabet, etc.]
+[Some of my graphs, they need to be made smaller. I also still have to write for this part.]
+
+#figure(
+  image("../results_regular_counting_60s/graphs/num_solutions_vs_states_boxplot_alphabet_3_counts_1_4.png"),
+  caption: []
+)
+
+#figure(
+  image("../results_regular_counting_60s/graphs/avg_propagations_vs_states_boxplot_alphabet_3_counts_1_16.png"),
+  caption: []
+)
+
+#figure(
+  image("../results_regular_counting_60s/graphs/avg_nogoods_vs_states_boxplot_alphabet_3_counts_1_2.png"),
+  caption: []
+)
+
+#figure(
+  image("../results_regular_counting_60s/graphs/avg_LearnedNogoodLength_vs_states_boxplot_alphabet_3_counts_1_2.png"),
+  caption: []
+)
+
+
+== Limitations
+[TODO]
 
 = Responsible Research <responsible_research>
 /*
@@ -463,7 +730,7 @@ we have tried to prevent additional setup and dependency conflicts that might ot
 = Conclusion <conclusion>
 In this paper we have presented the first ever extension with explanations for lazy clause generation (LCG) of Beldiceanu et al.$quote.r.single$s@beldiceanu_propagating_2013 propagator for the exact regular counting constraint. We have shown that when [insert conditions of cDFA], our propagator provides an advantage over an equivalent DFA based regular constraint propagated with Gvosdiovas et al.$quote.r.single$s@gvozdiovas_nfa_2025 extension with explanations for lcg of Pesant's@pesant_regular_2004 propagator, and that when [insert conditions of cDFA], it provides an advantage over an equivalent DFA based regular constraint decomposed into global constraints. This informs researchers on how to solve finite domain combinatorial problems involving regular counting more effectively. [insert additional important take-aways].
 
-In addition, we have documented two ways we have attempted to compare the aforementioned constraints. For comparing cDFA's with DFA's, we have shown the short-comings of modeling nonograms with cDFA's and the effectiveness of generating random equivalent finite automata.
+In addition, we have documented two ways we have attempted to compare the aforementioned constraints. For comparing cDFAs with DFAs, we have shown the short-comings of modeling nonograms with cDFAs and the effectiveness of generating random equivalent finite automata.
 
 //== Discussion
 /*
@@ -533,6 +800,37 @@ There are multiple opportunities for future research that we would like to see e
   + if copied, they contain a reference
   + can be interpreted on their own (e.g. by means of a legend)
 */
+  #pagebreak()
+= Mathematical definitions <math-definitions>
+Using the following two functions to respectively keep only the tuples with the minimum and maximum cost for a given state:
+
+$
+&"trimMin"(S) &= { chevron.l q, c chevron.r in S | exists.not chevron.l q, c' chevron.r in S : c' < c}\
+&"trimMax"(S) &= { chevron.l q, c chevron.r in S | exists.not chevron.l q, c' chevron.r in S : c' > c}
+$
+$underline("QCF")(i)$, $overline("QCF")(i)$, $underline("QCB")(i)$ and $overline("QCB")(i)$ can be implemented inductively:
+$
+underline("QCF")(i) &= cases(
+  {chevron.l q_0, 0 chevron.r} &&&"if" i = 0,
+  "trimMin"(&{ chevron.l delta_Q""(q, cal(l)), c + delta_NN""(q, cal(l)) chevron.r &| chevron.l q, c chevron.r in underline("QCF")(i - 1), cal(l) in italic("dom")(x_i)}) &"if" i in [1,n],
+)\
+
+overline("QCF")(i) &= cases(
+  {chevron.l q_0, 0 chevron.r} &&&"if" i = 0,
+  "trimMax"(&{ chevron.l delta_Q""(q, cal(l)), c + delta_NN""(q, cal(l)) chevron.r &| chevron.l q, c chevron.r in overline("QCF")(i - 1), cal(l) in italic("dom")(x_i)}) &"if" i in [1,n],
+)\
+
+underline("QCB")(i) &= cases(
+  {chevron.l q, 0 chevron.r &&| exists c in NN : chevron.l q, c chevron.r in underline("QCB")(i) } &"if" i = n + 1,
+  "trimMin"(&{ chevron.l q, c' + italic("inc") chevron.r &| chevron.l q', c' chevron.r in underline("QCB")(i + 1), cal(l) in italic("dom")(x_i), delta(q, cal(l)) = chevron.l q', italic("inc") chevron.r}) &"if" i in [1,n],
+)\
+
+overline("QCB")(i) &= cases(
+  {chevron.l q, 0 chevron.r &&| exists c in NN : chevron.l q, c chevron.r in overline("QCB")(i) } &"if" i = n + 1,
+  "trimMax"(&{ chevron.l q, c' + italic("inc") chevron.r &| chevron.l q', c' chevron.r in overline("QCB")(i + 1), cal(l) in italic("dom")(x_i), delta(q, cal(l)) = chevron.l q', italic("inc") chevron.r}) &"if" i in [1,n],
+)\
+$
+
 ]
 
 
