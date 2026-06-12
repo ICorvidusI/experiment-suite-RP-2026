@@ -21,7 +21,7 @@
 #set page(
   paper: "a4",
   numbering: "1",
-  margin: 3cm,
+  margin: 2cm,
 )
 
 #set text(font: "New Computer Modern", lang: "en", size: 11pt)
@@ -46,7 +46,7 @@
     )
     #title("Propagating regular counting with lazy clause generation")
 
-    #text(size: 14pt, weight: "semibold", "When DFAs with a counter offer an advantage")
+    #text(size: 12pt, weight: "semibold", "When DFAs with a counter offer an advantage")
 
     #v(1cm)
     #[
