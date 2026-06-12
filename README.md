@@ -19,6 +19,9 @@ Here you can find the experiments used for the paper and their history.
   devenv shell
   ```
 
+  This should automatically build Pumpkin and rebuild any time
+  an .rs file has been changed.
+
   You can exit the shell by running:
 
   ```console

@@ -202,10 +202,17 @@ in
   '';
 
   # https://devenv.sh/tasks/
-  # tasks = {
-  #   "myproj:setup".exec = "mytool build";
-  #   "devenv:enterShell".after = [ "myproj:setup" ];
-  # };
+  tasks = {
+    "pumpkin:build" = {
+      exec = "cargo build --release";
+      execIfModified = [
+        "Pumpkin/**/*.rs"          # All rs files in ./Pumpkin
+      ];
+      # Run the build in ./Pumpkin
+      cwd = "./Pumpkin";
+    };
+    "devenv:enterShell".after = [ "pumpkin:build" ];
+  };
 
   # https://devenv.sh/tests/
   enterTest = ''
