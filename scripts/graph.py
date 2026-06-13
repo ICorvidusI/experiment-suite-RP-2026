@@ -11,14 +11,16 @@ import re
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Sequence
+from typing import Callable, Sequence
 
+from matplotlib.lines import Line2D
 from numpy._typing import NDArray
 
 from config import runner_modes
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 class SolveStatus(Enum):
     UNSATISFIABLE = -1
@@ -224,7 +226,7 @@ def compile_data(result_dir: str):
     return np.array(mode_results_list, dtype=CollectedResult)
 
 
-def parseValues(results: NDArray, func, states: int | None = None, alphabet: int | None = None, max_count: int | None = None, min_solutions: int | None = None):
+def parseValues(results: NDArray, func: Callable, states: int | None = None, alphabet: int | None = None, max_count: int | None = None, condition: Callable | None = None):
     values = []
     labels = []
     positions = []
@@ -233,7 +235,7 @@ def parseValues(results: NDArray, func, states: int | None = None, alphabet: int
             (states == None or result.states == states) and
             (alphabet == None or result.alphabet == alphabet) and
             (max_count == None or max(result.counts) == max_count) and
-            (min_solutions == None or result.nSolutions >= min_solutions)
+            (condition == None or condition(result))
             for result in results[i]
         ])]
         solutions = [func(result) for result in filtered_results]
@@ -272,14 +274,14 @@ def makeBoxplot(values, positions, labels, colors, title, x_label, y_label, file
     plt.close()
 
 
-def valuesByStates(results, func, state_nums, alphabet, max_count, colors, min_solutions): 
+def valuesByStates(results, func, state_nums, alphabet, max_count, colors, condition): 
     all_values = []
     all_positions = []
     all_labels = []
     all_colors = []
 
     for i, states in enumerate(state_nums):
-        values, labels, positions = parseValues(results, func, states=states, alphabet=alphabet, max_count=max_count, min_solutions=min_solutions)
+        values, labels, positions = parseValues(results, func, states=states, alphabet=alphabet, max_count=max_count, condition=condition)
         all_values.extend(values)
         all_positions.extend([(i * 8) + ((pos + 1) * 2) for pos in positions])
         all_labels.extend([f"{label}{f"\n|Q|={states}" if label == "cdfa" else ""}" for label in labels])
@@ -287,8 +289,7 @@ def valuesByStates(results, func, state_nums, alphabet, max_count, colors, min_s
 
     return all_values, all_positions, all_labels, all_colors
 
-def plotByStatesAndWithoutX(results, func, graph_dir, file_name, title, setup, state_nums, alphabet, max_count, colors, min_solutions, x, x_name):
-    all_values, all_positions, all_labels, all_colors = valuesByStates(results, func, state_nums, alphabet, max_count, colors, min_solutions)
+def plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, graph_dir, file_name, title, setup, alphabet, max_count, x, x_name):
 
     # boxplot
     makeBoxplot(all_values, all_positions, all_labels, all_colors,
@@ -312,6 +313,53 @@ def plotByStatesAndWithoutX(results, func, graph_dir, file_name, title, setup, s
         f"{title} {setup}", "", title,
         f"{graph_dir}/{file_name}_vs_states_boxplot_without_{x_name}_alphabet_{alphabet}{f"_counts_1_{max_count}" if max_count is not None else ""}.png",
         "linear", 10, 6)
+
+
+def plotAll(graph_dir, file_name, results, func, condition, state_nums, alphabet_sizes, max_counts, title, ylabel, yscale, ymin, ymax):
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+
+    markers = ["o", "x", "^"]
+    linestyles = ["-", "--", "-."]
+
+    count_colors = ["tab:brown", "tab:orange", "tab:red", "tab:blue"]
+
+    line_handles = [Line2D([0], [0], color="black", marker=marker, linestyle=linestyle, label=label) for marker, linestyle, label in zip(markers, linestyles, ["cdfa", "decomp", "DFA"])]
+    color_handles = [Line2D([0], [0], color=color, label=f"{'{'}1, {label}{'}'}") for color, label in zip(count_colors, max_counts)]
+
+    fig.legend(handles=line_handles, loc='outside upper right', title="Type")
+    fig.legend(handles=color_handles, loc='outside center right', title="Counts")
+
+    fig.set_figwidth(12)
+    fig.set_figheight(8)
+
+    fig.suptitle(title)
+    fig.supylabel(ylabel)
+
+    for alphabet, ax in zip(alphabet_sizes, [ax1, ax2]):
+        # Compare all num_solutions avg in a graph.
+        for i, max_count in enumerate(max_counts):
+            all_values, _, _, _ = valuesByStates(results, func, state_nums, alphabet, max_count, [], condition)
+
+            for idx in range(3):
+                indices = np.where(np.mod(np.arange(len(all_values)), 3) == idx)
+
+                avgs = []
+                for values in np.array(all_values, dtype=list)[indices]:
+                    avgs.append(np.mean(values) if len(values) > 0 else 0)
+
+                ax.plot(state_nums, avgs, markers[idx] + linestyles[idx], linewidth=2, color=count_colors[i])
+
+        ax.set_title(f"\nwith |Σ|={alphabet}")
+        ax.set_xlabel("|Q| amount of states of cDFA")
+        ax.grid(axis="y", which='both')
+        ax.grid(axis="x")
+        ax.set_xticks(state_nums)
+        ax.set_ylim(bottom=ymin, top=ymax)
+        ax.set_yscale(yscale)
+
+    plt.savefig(f"{graph_dir}/{file_name}.png")
+    plt.close()
+
 
 def main():
     description = "Visualize the data from an experiment."
@@ -351,39 +399,91 @@ def main():
     alphabet_sizes = [3, 6]
     max_counts = [2, 4, 8, 16]
 
+    plotAll(graph_dir, "all_num_solutions", results,
+            lambda r: r.nSolutions, None,
+            state_nums, alphabet_sizes, max_counts,
+            "Average number of solutions after 60s",
+            "Average number of solutions", 'log', 1, 1_000_000)
+
+    plotAll(graph_dir, "all_AverageLearnedNogoodLength", results,
+            lambda r: r.averageLearnedNogoodLength[299],
+            lambda r: r.nSolutions >= 300 and r.nogoods[299] != 0,
+            state_nums, alphabet_sizes, max_counts,
+            "Average learned nogood length at 300 solutions",
+            "Average learned nogood length", 'linear', -5, 250)
+
+    plotAll(graph_dir, "all_LBD", results,
+            lambda r: r.averageLbd[299],
+            lambda r: r.nSolutions >= 300 and r.nogoods[299] != 0,
+            state_nums, alphabet_sizes, max_counts,
+            "Average LBD at 300 solutions",
+            "Average LBD", 'linear', -5, 160)
+
+    plotAll(graph_dir, "all_num_propagations", results,
+            lambda r: r.propagations[299],
+            lambda r: r.nSolutions >= 300,
+            state_nums, alphabet_sizes, max_counts,
+            "Average number of propagations at 300 solutions",
+            "Average number of propagations", 'log', 1_000, 2_000_000)
+
+    plotAll(graph_dir, "all_num_nogoods", results,
+            lambda r: r.nogoods[299],
+            lambda r: r.nSolutions >= 300,
+            state_nums, alphabet_sizes, max_counts,
+            "Average number of conflicts at 300 solutions",
+            "Average number of conflicts", 'linear', -5, 360)
+
+    # Plot all individual boxplots.
     for alphabet in alphabet_sizes:
-
-        # Compare number of solutions
         for max_count in max_counts:
+            # Compare number of solutions
             setup =  f"after running for 60s\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
-            plotByStatesAndWithoutX(results, lambda r: r.nSolutions, graph_dir,
+            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.nSolutions,
+                                                                               state_nums, alphabet, max_count, colors,
+                                                                               None)
+            plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, graph_dir,
                                     "num_solutions", "Number of solutions",
-                                    setup, state_nums, alphabet, max_count, colors, None, 2, "dfa")
-        # Compare average nogood length
-        for max_count in max_counts:
-            setup =  f"after running for 60s\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
-            plotByStatesAndWithoutX(results, lambda r: r.averageLearnedNogoodLength[-1], graph_dir,
-                                    "avg_LearnedNogoodLength", "Average learned nogood length",
-                                    setup, state_nums, alphabet, max_count, colors, None, 2, "dfa")
+                                    setup, alphabet, max_count, 2, "dfa")
 
-        # Compare average number of propagations
-        for max_count in max_counts:
-            setup =  f"after running for 60s\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
-            plotByStatesAndWithoutX(results, lambda r: r.propagations[-1] / r.nSolutions, graph_dir,
-                                    "avg_propagations", "Average number of propagations per solution",
-                                    setup, state_nums, alphabet, max_count, colors, None, 1, "decomp")
-        #plotByCounts(results, lambda r: r.propagations[-1], graph_dir, "num_propagations", "Number of propagations", max_counts, alphabet, colors)
+            # Compare learned nogood length
+            setup =  f"after 300 solutions\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
+            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.averageLearnedNogoodLength[299],
+                                                                               state_nums, alphabet, max_count, colors,
+                                                                               lambda r: r.nSolutions >= 300 and r.nogoods[299] != 0)
+            plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, graph_dir,
+                                    "LearnedNogoodLength", "Learned nogood length",
+                                    setup, alphabet, max_count, 2, "dfa")
 
-        # Compare average number of nogoods
-        for max_count in max_counts:
-            setup =  f"after 60s\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
-            plotByStatesAndWithoutX(results, lambda r: r.nogoods[-1] / r.nSolutions, graph_dir,
-                                    "avg_nogoods", "Average number of nogoods per solution",
-                                    setup, state_nums, alphabet, max_count, colors, None, 1, "decomp")
+            # Compare ldb
+            setup =  f"after 300 solutions\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
+            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.averageLbd[299],
+                                                                               state_nums, alphabet, max_count, colors,
+                                                                               lambda r: r.nSolutions >= 300 and r.nogoods[299] != 0)
+            plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, graph_dir,
+                                    "LBD", "LBD",
+                                    setup, alphabet, max_count, 2, "dfa")
+
+
+            # Compare number of propagations
+            setup =  f"after 300 solutions\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
+            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.propagations[299],
+                                                                               state_nums, alphabet, max_count, colors,
+                                                                               lambda r: r.nSolutions >= 300)
+            plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, graph_dir,
+                                    "propagations", "Average number of propagations per solution",
+                                    setup, alphabet, max_count, 1, "decomp")
+
+            # Compare number of nogoods
+            setup =  f"after 300 solutions\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
+            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.nogoods[299],
+                                                                               state_nums, alphabet, max_count, colors,
+                                                                               lambda r: r.nSolutions >= 300)
+            plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, graph_dir,
+                                    "nogoods", "Number of nogoods",
+                                    setup, alphabet, max_count, 1, "decomp")
 
         # Compare peak depth
         #plotByStates(results, lambda r: r.peakDepth[-1], graph_dir, "peak_depth", "Peak depth", setup, state_nums, alphabet, None, colors)
-        #plotByCounts(results, lambda r: r.peakDepth[-1], graph_dir, "peak_depth", "Peak depth", max_counts, alphabet, colors)
 
         #setup =  f"after running for 60s\nwith |Σ|={alphabet}"
 
