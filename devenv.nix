@@ -73,7 +73,7 @@ in
         create() {
           while read states alphabet sequence; do
             read -a k
-            for i in $(seq 5); do
+            for i in $(seq 10); do
               uv run ${config.git.root}/scripts/problem_generators/regular_counting.py --num-states "$states" --alphabet-size "$alphabet" --sequence-length "$sequence" --k "${"$" + "{k[@]}"}" --seed "$i" --data-dir "${config.git.root}/problems/regular_counting/data"
             done
           done
