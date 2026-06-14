@@ -4,19 +4,73 @@
 
 #import "@preview/finite:0.5.1": automaton
 
-#let appendix(body) = {
-  set heading(numbering: "A.1.1", supplement: [Appendix])
-  counter(heading).update(0)
-  body
-}
-
 #let exampleCounter = counter("example")
+
 #let example(it) = [
   #set par(first-line-indent: 0em, spacing: 1.3em)
   #exampleCounter.step()
   *Example #context exampleCounter.display():*
   #it #h(1fr) $ballot$
 ]
+
+#show figure: set block(spacing: 1cm)
+#show figure.caption: c => [
+  #text(weight: "bold")[
+    #c.supplement #c.counter.display(c.numbering)#c.separator
+  ]
+  #c.body
+]
+
+#show table.cell.where(y: 0): strong
+#show table.cell: it => {
+  set text(size: 10pt)
+  it
+}
+  
+#set table(
+  stroke: (x, y) => if y == 0 {
+    (bottom: 0.7pt + black)
+  },
+  align: (x, y) => (
+    if x > 0 { center }
+    else { left }
+  )
+)
+
+#let appendix(body) = {
+  set heading(numbering: "A.1.1", supplement: [Appendix])
+  counter(heading).update(0)
+
+  show heading.where(level: 1): hdr => {
+  	counter(figure.where(kind:image)).update(0)
+  	counter(figure.where(kind:table)).update(0)
+    counter("example").update(0)
+  	hdr
+  }
+
+  set figure(numbering: it => {
+    let hdr = counter(heading).get().first()
+    numbering("A.1.1", hdr, it)
+  })
+
+  let example(it) = [
+    #set par(first-line-indent: 0em, spacing: 1.3em)
+    #exampleCounter.step()
+    #let hdr = counter(heading).get().first()
+    *Example #context numbering("A.1.1", hdr) #exampleCounter.display():*
+    #it #h(1fr) $ballot$
+  ]
+
+  [
+    #pagebreak()
+    #[
+      #set heading(numbering: none)
+      = Appendix
+    ]
+    #show heading: set text(size: 14pt)
+    #body
+  ]
+}
 
 #set page(
   paper: "a4",
@@ -44,9 +98,9 @@
       height: auto,
       width: 10cm,
     )
-    #title("Propagating regular counting with lazy clause generation")
+    #title("Propagating Regular Counting with Lazy Clause Generation")
 
-    #text(size: 12pt, weight: "semibold", "When DFAs with a counter offer an advantage")
+    #text(size: 12pt, weight: "semibold", "When counter-DFAs offer an advantage")
 
     #v(1cm)
     #[
@@ -72,7 +126,7 @@
     #set text(size: 9pt)
     Name of the student: #context document.author.at(0)\
     Final project course: CSE3000 Research Project\
-    Thesis committee: Emir Demirović, Imko Marijnissen, \<Examiner>\
+    Thesis committee: Emir Demirović, Imko Marijnissen, Andreea Costea
   ]
   #v(2cm)
   #set text(size: 10pt)
@@ -84,13 +138,7 @@
 #pagebreak()
 #counter(page).update(1)
 #set par(justify: true, first-line-indent: 1em, spacing: 0.65em)
-#show figure: set block(spacing: 1cm)
-#show figure.caption: c => [
-  #text(weight: "bold")[
-    #c.supplement #c.counter.display(c.numbering)#c.separator
-  ]
-  #c.body
-]
+
 #[
   #show heading: it => align(center, it)
   #show par: it => block(inset: (left: 1cm, right: 1cm), it)
@@ -343,7 +391,7 @@ $
   + $italic("dom")(italic("count")) = {2, 3}$
 ]
 
-To implement propagation for variables in $X$, a value $cal(l)$ is removed from the domain of $x_i$ iff:\
+To implement propagation for variables in $X$, a value $cal(l)$ is removed from the domain of $x_i$ iff for all states, taking transition $cal(l)$ results in a range of counts that does not overlap with the domain of $italic("count")$:\
 
 $
 forall q cases(delim: "|", vec(delim: "[",
@@ -443,46 +491,6 @@ Our inference checker first computes the set of all possible counts after consum
 In an attempt to show when our cDFA-based propagator offers advantages over DFA based ones, we considered two benchmarks. Our initial plan was based on modelling nonograms, but this proved impractical. We decided to elaborate on why nonograms are a poor problem to model with cDFAs, to helps future research avoid this approach and give insight into what types of problems are unlikely to benefit from being modeled with cDFA. We also explain why generating random cDFAs and equivalent DFAs is a good benchmark.
 //The performance of the regular_cDFA constraint, the DFA-based regular constraint and its decomposition were benchmarked.
 // Performance was assessed based on runtime, conflicts, propagations and amount of states of the finite automata.
-
-=== Nonograms
-Nonograms are well-known puzzles. See @nonogram for an example. They consist of an empty grid, where each row and column has a "hint"---a list of numbers---that corresponds to what squares in the row or column can be filled. Each number $n$ in the hint corresponds to a subsequence of $n$ filled in squares; the subsequences occur in order; subsequences are separated by at least one empty square.
-
-#figure(
-  [WIP],
-  caption: [An example of a nonogram]
-)<nonogram>
-
-As this problem relies on patterns that count, it seems like a good fit to model with cDFAs. And yes, it is possible to model the hints for the rows and columns with regular counting; a given hint $[k, m, n]$ can be modeled by the regular expression "$0^* 1{k} 0⁺ 1{m} 0^+ 1{n} 0^*$". There are two problems when modeling with cDFAs however.
-
-First of all, the count of a subsequence is always a fixed value, whereas regular_cDFA is able to propagate on the count. This means modeling nonograms does not exploit an advantage of cDFA.
-
-Second of all, there are multiple patterns that are counted. This poses the biggest problem. cDFAs only have one counter. As such, nonograms can not be trivially modeled using cDFAs in a way that results in a smaller encoding than when modeled with a DFA.
-
-There is one approach however. If a cDFA increments by at most one, the maximum count after consuming a sequence of $n$ values is $n$. To implement a second counter, whose count can be distinguished from the first, edges incrementing by $n+1$ can thus be used. An accepting count can then be encoded as:
-$
-1 dot italic("count"_1)+(n+1) dot italic("count"_2)
-$
-This can be generalized for $k$ counters as:
-$
-sum_(i=1)^k (n+1)^(i-1) dot italic("count"_i)
-$
-Note that this essentially represents each count as a digit in a base $n+1$ number. See @nonogram-automata for examples of each approach.
-
-#figure(
-  grid(columns: 3, row-gutter: 2mm, column-gutter: 1mm,
-
-    block[WIP], block[WIP], block[WIP],
-
-  "a) Trivial cDFA", "b) Encoded cDFA", "c) DFA"),
-  caption: [Three ways to represent the hint [2, 3]]
-)<nonogram-automata>
-
-This introduces a new problem however: The accepting count grows exponentially proportional to the amount of encoded counts. For small nonograms, this is no issue, as they have small sequences and consequently a small amount of numbers per hint. As nonograms grow in size however, so do their sequences and consequently the amount of numbers per hint. For a 30x30 nonogram, that thus has sequences of length 30, it is not uncommon to see hints with seven or more numbers. As $31^7 gt 2^32$, the accepting counts used to model larger nonograms are unable to be represented by either signed or unsigned 32-bit integers.
-
-These two factors---having a single count per sequence and exponential blowup of the accepted count---make it impractical to pursue this problem as a benchmark.
-// _
-// Figured out that the way I was doing this resulted in counts bigger than what can be stored in a i32, so it will not work. I will have to create other benchmarks.
-// _
 
 === Random equivalent constraints
 We decided to use randomly generated equivalent DFA and cDFA to benchmark. This will allow us to benchmark cDFAs in general in stead of ones used to model a specific problem.
@@ -663,41 +671,55 @@ This approach was inspired by Gvosdivas et al.. An important change is that we o
 The benchmarks were run on a laptop with [Insert specs] running NixOS without a graphical user interface, to minimize background processes.
 
 #figure(
-  table(),
+  table(columns: 2, align: left,
+    table.header([Parameter], [Values]),
+    [Alphabet size ($|Sigma|$)], [3, 6],
+    [Amount of states ($|Q|$)], [3, 5, 7, 9],
+    [Counts ($K$)], [{1, 2}, {1, 4}, {1, 8}, {1, 16}],
+  ),
   caption: [TODO]
 )<configurations>
 
-Five randomly generated instances of our benchmark were run for 60 seconds, for each configuration of counts, alphabet size and amount of states. The different configurations can be found in @configurations. The length of the sequence of an instance equals the amount of states times the maximum count plus one. This way, there exists a sequence which counts past the maximum count.
+For each unique combination of cDFA qualities found in @configurations, ten randomly generated instances of our benchmark were run for 60 seconds. The length of the sequence of an instance equals $|Q| dot (italic("max")(K) + 1)$. This way, there exists a sequence which counts past the maximum count in stead of only counting up to the maximum count.
 
-For each configuration the following metrics were compared:
-- Number of solutions;
-- Average propagation per solution;
-- Average nogoods per solution;
-- Average learned nogood length;
+For each configuration the following metrics were compared based on the average of the ten instances:
+- Number of solutions after 60 seconds;
+- Number of propagation at 300 solutions;
+- Number of conflicts at 300 solutions;
+- Average learned nogood length at 300 solutions;
+- Average LBD at 300 solutions.
+\
+As after 60 seconds the number of solutions differ drastically, the latter four metrics were compared at 300 solutions in stead and instances that did not reach 300 solutions were pruned for them. For average learned nogood length and average LBD, instances that did not have any conflicts were also pruned.
 
 == Results
-[Some of my graphs, they need to be made smaller. I also still have to write for this part.]
+[I also still have to write for this part.]
 
 #figure(
-  image("../results_regular_counting_60s/graphs/num_solutions_vs_states_boxplot_alphabet_3_counts_1_4.png"),
+  grid(columns: 2, row-gutter: 2mm, column-gutter: 1mm,
+
+    grid.cell(colspan: 2,
+      image("../results_regular_counting_60s/graphs/all_num_solutions.png", width: 65%),
+    ),
+    grid.cell(colspan: 2,
+      "(a)",
+    ),
+    image("../results_regular_counting_60s/graphs/all_num_propagations.png"),
+    image("../results_regular_counting_60s/graphs/all_num_nogoods.png"),
+
+    "(b)", "(c)"
+  ),
   caption: []
-)
+) <num-results>
 
 #figure(
-  image("../results_regular_counting_60s/graphs/avg_propagations_vs_states_boxplot_alphabet_3_counts_1_16.png"),
-  caption: []
-)
+  grid(columns: 2, row-gutter: 2mm, column-gutter: 1mm,
+    image("../results_regular_counting_60s/graphs/all_AverageLearnedNogoodLength.png"),
+    image("../results_regular_counting_60s/graphs/all_LBD.png"),
 
-#figure(
-  image("../results_regular_counting_60s/graphs/avg_nogoods_vs_states_boxplot_alphabet_3_counts_1_2.png"),
+    "(a)", "(b)"
+  ),
   caption: []
-)
-
-#figure(
-  image("../results_regular_counting_60s/graphs/avg_LearnedNogoodLength_vs_states_boxplot_alphabet_3_counts_1_2.png"),
-  caption: []
-)
-
+) <avg-results>
 
 == Limitations
 [TODO]
@@ -707,11 +729,6 @@ For each configuration the following metrics were compared:
 Reflect on the ethical aspects of your research and discuss the reproducibility of your methods.
 Note that although in many published works there is no such a section (it may be part of some meta-information collected by the journal, or part of the discussion section), we require you to think (and report) about this as part of this course.
 */
-== Data generation
-The data we used for benchmarking was all synthetically generated by scripts. As such, its usage is unrestricted by ethical considerations. One important detail to mention however, is that FAdo@fado#[]---a python library for manipulating finite automata---falls under the GNU General Public License. As such, the python script using it to generate a random equivalent DFA and cDFA also falls under this license. The rest of our contributions fall under the MIT license.
-
-== AI usage
-LLM's---and other generative AI---have become prevalent not only in everyday life, but also in academia. However, we have opted to not use any generative AI during the course of this research, as it makes it easy to outsource thinking, which can lead to research that is less critical. This paper and our contributions have been human generated.
 
 == Reproducibility
 All our experiments and code have been version controlled since the beginning using git, and are available in our _experiment suite_#footnote[https://github.com/ICorvidusI/experiment-suite-RP-2026]<repo>.
@@ -721,11 +738,21 @@ Our experiment suite includes the following:
 - Scripts to generate and run the benchmarks;
 - Results of the benchmarks;
 - A script to process and visualise the results.
+- Boxplots comparing all metrics used in this paper.
 In addition to this, all randomly generated instances were seeded and labeled with the used seed.
 
 By using _devenv_
 #footnote[https://devenv.sh/\, a tool for declarative development environments that isolates and version locks packages, based on the _nix package manager_#footnote[https://nixos.org/]]
 we have tried to prevent additional setup and dependency conflicts that might otherwise have occurred when running the experiments on other machines.
+
+== Data generation
+The data we used for benchmarking was all synthetically generated by scripts. As such, its usage is unrestricted by ethical considerations. One important detail to mention however, is that FAdo@fado#[]---a python library for manipulating finite automata---falls under the GNU General Public License. As such, the python script using it to generate a random equivalent DFA and cDFA also falls under this license. The rest of our contributions fall under the MIT license.
+
+== Reporting failure
+Research tends to less often report on failures, which can result in knowledge gaps and failing approaches being repeated. We have thus decided to include details of a failed approach to benchmarking using nonograms in @nonograms.
+
+== AI usage
+LLM's---and other generative AI---have become prevalent not only in everyday life, but also in academia. However, we have opted to not use any generative AI during the course of this research, as it makes it easy to outsource thinking, which can lead to research that is less critical. This paper and our contributions have been human generated.
 
 = Conclusion <conclusion>
 In this paper we have presented the first ever extension with explanations for lazy clause generation (LCG) of Beldiceanu et al.$quote.r.single$s@beldiceanu_propagating_2013 propagator for the exact regular counting constraint. We have shown that when [insert conditions of cDFA], our propagator provides an advantage over an equivalent DFA based regular constraint propagated with Gvosdiovas et al.$quote.r.single$s@gvozdiovas_nfa_2025 extension with explanations for lcg of Pesant's@pesant_regular_2004 propagator, and that when [insert conditions of cDFA], it provides an advantage over an equivalent DFA based regular constraint decomposed into global constraints. This informs researchers on how to solve finite domain combinatorial problems involving regular counting more effectively. [insert additional important take-aways].
@@ -761,7 +788,6 @@ There are multiple opportunities for future research that we would like to see e
 - how does our propagator compare to the similar, but more widely used cost_regular constraint---decomposed or propagated with an extension to Demassey et al.$quote.r.single$s@demassey_cost-regular_2006 propagator---with explanations for LCG?
 - Can Martin and Pearson's@martin_when_2022 algorithm---to compute when bounds consistency implies domain consistency for cDFA-based regular counting---be used to improve our propagator's speed or explanations?
 - As our explanations for LCG are trivially based on the propagation, can they be shortened to provide better conflict-learning?
-- Can our inference checker be optimized in any way? One approach we could see working is to prune counts of $"QCF"(i)$---see @cdfa_constraint#[]---that exceed the upper bound of the domain of $italic("count")$.
 
 #appendix[
 /*
@@ -800,7 +826,6 @@ There are multiple opportunities for future research that we would like to see e
   + if copied, they contain a reference
   + can be interpreted on their own (e.g. by means of a legend)
 */
-  #pagebreak()
 = Mathematical definitions <math-definitions>
 Using the following two functions to respectively keep only the tuples with the minimum and maximum cost for a given state:
 
@@ -830,6 +855,47 @@ overline("QCB")(i) &= cases(
   "trimMax"(&{ chevron.l q, c' + italic("inc") chevron.r &| chevron.l q', c' chevron.r in overline("QCB")(i + 1), cal(l) in italic("dom")(x_i), delta(q, cal(l)) = chevron.l q', italic("inc") chevron.r}) &"if" i in [1,n],
 )\
 $
+
+= Nonograms <nonograms>
+Nonograms are well-known puzzles. See @nonogram for an example. They consist of an empty grid, where each row and column has a "hint"---a list of numbers---that corresponds to what squares in the row or column can be filled. Each number $n$ in the hint corresponds to a subsequence of $n$ filled in squares; the subsequences occur in order; subsequences are separated by at least one empty square.
+
+#figure(
+  [WIP],
+  caption: [An example of a nonogram]
+)<nonogram>
+
+As this problem relies on patterns that count, it seems like a good fit to model with cDFAs. And yes, it is possible to model the hints for the rows and columns with regular counting; a given hint $[k, m, n]$ can be modeled by the regular expression "$0^* 1{k} 0⁺ 1{m} 0^+ 1{n} 0^*$". There are two problems when modeling with cDFAs however.
+
+First of all, the count of a subsequence is always a fixed value, whereas regular_cDFA is able to propagate on the count. This means modeling nonograms does not exploit an advantage of cDFA.
+
+Second of all, there are multiple patterns that are counted. This poses the biggest problem. cDFAs only have one counter. As such, nonograms can not be trivially modeled using cDFAs in a way that results in a smaller encoding than when modeled with a DFA.
+
+There is one approach however. If a cDFA increments by at most one, the maximum count after consuming a sequence of $n$ values is $n$. To implement a second counter, whose count can be distinguished from the first, edges incrementing by $n+1$ can thus be used. An accepting count can then be encoded as:
+$
+1 dot italic("count"_1)+(n+1) dot italic("count"_2)
+$
+This can be generalized for $k$ counters as:
+$
+sum_(i=1)^k (n+1)^(i-1) dot italic("count"_i)
+$
+Note that this essentially represents each count as a digit in a base $n+1$ number. See @nonogram-automata for examples of each approach.
+
+#figure(
+  grid(columns: 3, row-gutter: 2mm, column-gutter: 1mm,
+
+    block[WIP], block[WIP], block[WIP],
+
+  "(a) Trivial cDFA", "(b) Encoded cDFA", "(c) DFA"),
+  caption: [Three ways to represent the hint [2, 3]]
+)<nonogram-automata>
+
+This introduces a new problem however: The accepting count grows exponentially proportional to the amount of encoded counts. For small nonograms, this is no issue, as they have small sequences and consequently a small amount of numbers per hint. As nonograms grow in size however, so do their sequences and consequently the amount of numbers per hint. For a 30x30 nonogram, that thus has sequences of length 30, it is not uncommon to see hints with seven or more numbers. As $31^7 gt 2^32$, the accepting counts used to model larger nonograms are unable to be represented by either signed or unsigned 32-bit integers.
+
+These two factors---having a single count per sequence and exponential blowup of the accepted count---make it impractical to pursue this problem as a benchmark.
+// _
+// Figured out that the way I was doing this resulted in counts bigger than what can be stored in a i32, so it will not work. I will have to create other benchmarks.
+// _
+
 
 ]
 

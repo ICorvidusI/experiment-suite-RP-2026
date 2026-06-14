@@ -318,7 +318,7 @@ def plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, g
 def plotAll(graph_dir, file_name, results, func, condition, state_nums, alphabet_sizes, max_counts, title, ylabel, yscale, ymin, ymax):
     fig, (ax1, ax2) = plt.subplots(1, 2)
 
-    markers = ["o", "x", "^"]
+    markers = ["o", "^", "x"]
     linestyles = ["-", "--", "-."]
 
     count_colors = ["tab:brown", "tab:orange", "tab:red", "tab:blue"]
@@ -326,11 +326,11 @@ def plotAll(graph_dir, file_name, results, func, condition, state_nums, alphabet
     line_handles = [Line2D([0], [0], color="black", marker=marker, linestyle=linestyle, label=label) for marker, linestyle, label in zip(markers, linestyles, ["cdfa", "decomp", "DFA"])]
     color_handles = [Line2D([0], [0], color=color, label=f"{'{'}1, {label}{'}'}") for color, label in zip(count_colors, max_counts)]
 
-    fig.legend(handles=line_handles, loc='outside upper right', title="Type")
-    fig.legend(handles=color_handles, loc='outside center right', title="Counts")
+    fig.legend(handles=line_handles, loc='outside upper right', bbox_to_anchor=(1.005, .9), title="Type")
+    fig.legend(handles=color_handles, loc='outside upper right', bbox_to_anchor=(1.005, .75), title="Counts")
 
-    fig.set_figwidth(12)
-    fig.set_figheight(8)
+    fig.set_figwidth(11)
+    fig.set_figheight(6)
 
     fig.suptitle(title)
     fig.supylabel(ylabel)
@@ -357,7 +357,7 @@ def plotAll(graph_dir, file_name, results, func, condition, state_nums, alphabet
         ax.set_ylim(bottom=ymin, top=ymax)
         ax.set_yscale(yscale)
 
-    plt.savefig(f"{graph_dir}/{file_name}.png")
+    plt.savefig(f"{graph_dir}/{file_name}.png", dpi=300)
     plt.close()
 
 
