@@ -1,5 +1,0 @@
-output ["grid = \n",let {array [int] of string: X_INTRODUCED_203_ = [], array [int] of string: X_INTRODUCED_204_ = [], array [int,int] of string: X_INTRODUCED_205_ = [(X_INTRODUCED_201_, X_INTRODUCED_202_) : showDzn(grid[X_INTRODUCED_201_,X_INTRODUCED_202_]) | X_INTRODUCED_201_ in index_set_1of2(grid), X_INTRODUCED_202_ in index_set_2of2(grid)]} in (show2d_indexed(X_INTRODUCED_203_,X_INTRODUCED_204_,X_INTRODUCED_205_)),";\n"];
-int: width = 10;
-int: height = 10;
-array [1..100] of int: X_INTRODUCED_16_;
-array [1..height,1..width] of int: grid = array2d(1..10,1..10,X_INTRODUCED_16_);

@@ -53,7 +53,7 @@ def run_solver(
                 "--statistics",
                 "--output-time",
                 "--output-objective",
-                "--all-solutions",
+                # "--all-solutions",
                 "--time-limit", f"{time_limit * 1000}",
                 # "--output-to-file", output_file,
             ] + mode.parameters + [

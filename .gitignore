@@ -7,7 +7,7 @@ devenv.local.yaml
 .direnv
 
 #Compiled result data
-*/compiled_data.npy
+**/compiled_data.npy
 
 # pre-commit
 .pre-commit-config.yaml
