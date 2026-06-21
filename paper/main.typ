@@ -751,7 +751,7 @@ Note that although in many published works there is no such a section (it may be
 */
 
 == Reproducibility
-All our experiments and code have been version controlled since the beginning using git, and are available in our experiment suite#footnote[https://github.com/ICorvidusI/experiment-suite-RP-2026]<repo>.
+All our experiments and code have been version controlled since the beginning using git, and are available in our experiment suite#footnote[https://github.com/ICorvidusI/experiment-suite-RP-2026/tree/submission-21-06-2026]<repo>.
 This was done not only to allow others to check our work, but also in an effort to make any material that might be of interest for future research readily available.
 Our experiment suite includes the following:
 - A fork of Pumpkin, extended with the constraints used;
