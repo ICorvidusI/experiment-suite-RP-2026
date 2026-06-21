@@ -3,7 +3,7 @@
 [![Built with devenv](https://devenv.sh/assets/devenv-badge.svg)](https://devenv.sh)
 
 This is the reproducibility package for the paper
-"DFA vs cDFA based propagation for regular counting with lazy clause generation".
+"Propagating regular counting with Lazy Clause Generation".
 Here you can find the experiments used for the paper and their history.
 
 ## Setup devenv
@@ -19,7 +19,7 @@ Here you can find the experiments used for the paper and their history.
   devenv shell
   ```
 
-  This should automatically build Pumpkin and rebuild any time
+  This should automatically build Pumpkin and rebuild on entry any time
   an .rs file has been changed.
 
   You can exit the shell by running:

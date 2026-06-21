@@ -1,0 +1,4 @@
+{"type": "statistics", "statistics": {"paths": 0, "flatIntVars": 403, "flatIntConstraints": 322, "method": "satisfy", "flatTime": 0.116835}}
+{"type": "statistics", "statistics": {"nodes": 3416, "restarts": 0, "peakDepth": 314, "solveTime": 0.377723284, "variables": 486, "propagators": 483, "failures": 400, "propagations": 48671, "nogoods": 400, "AverageConflictSize": 67.895, "NumUnitNogoodsLearned": 0, "AverageLearnedNogoodLength": 239.6275, "AverageBacktrackAmount": 0, "AverageLbd": 8.08}}
+{"type": "solution", "output": {"json": {  "sequence" : [3, 4, 6, 4, 1, 3, 5, 4, 4, 3, 4, 4, 5, 3, 5, 2, 3, 2, 5, 3, 2, 2, 3, 3, 5, 3, 5, 1, 6, 4, 4, 6, 3, 3, 2, 4, 5, 3, 3, 3, 5, 3, 5, 4, 1, 5, 4, 5, 3, 6, 2, 5, 6, 1, 5, 5, 3, 1, 5, 5, 4, 3, 4, 2, 3, 3, 1, 1, 5, 3, 5, 2, 4, 4, 4, 3, 2, 1, 5, 3, 6]}}, "sections": ["json"], "time": 571}
+{"type": "statistics", "statistics": {"nSolutions": 1}}

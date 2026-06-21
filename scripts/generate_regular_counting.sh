@@ -1,1 +1,0 @@
-/nix/store/4lkvp8ka16c8fnxgdsxc06yliyxglz6j-scripts-generate_regular_counting.sh

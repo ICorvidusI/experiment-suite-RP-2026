@@ -11,7 +11,7 @@ import re
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Sequence
+from typing import Callable
 
 from matplotlib.lines import Line2D
 from numpy._typing import NDArray
@@ -20,12 +20,12 @@ from config import runner_modes
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
 class SolveStatus(Enum):
     UNSATISFIABLE = -1
-    UNFINISHED = 0
-    ALL_SOLUTIONS = 1
+    UNKNOWN = 0
+    SOLUTION = 1
+    ALL_SOLUTIONS = 2
 
 @dataclass
 class CollectedResult:
@@ -66,7 +66,7 @@ class Result():
 
         self.flatIntVars = 0
 
-        self.status: SolveStatus = SolveStatus.UNFINISHED
+        self.status: SolveStatus = SolveStatus.UNKNOWN
         self.flatTime: float = -1
         self.initTime: float = -1
         self.nSolutions: int = 0
@@ -142,7 +142,7 @@ class Result():
     
                 case {"type": "solution", "output": {"json": solution}, "sections": ["json"], "time": _
                 }:
-                    pass
+                    self.status = SolveStatus.SOLUTION
     
                 case {"type": "statistics", "statistics": {
                     "initTime": initTime,
@@ -169,6 +169,11 @@ class Result():
                 case {"type": "statistics", "statistics": {"nSolutions": nSolutions}}:
                     self.nSolutions = nSolutions
     
+                case {'type': 'status', 'status': "UNKNOWN", 'time': _}:
+                    print(line)
+                    print(f"{self.type}, Seed: {self.seed}\nStates: {self.states}, Alphabet: {self.alphabet}, Sequence: {self.sequence}, \nCounts: {self.counts}")
+                    self.status = SolveStatus.UNKNOWN
+
                 case {'type': 'status', 'status': "UNSATISFIABLE", 'time': _}:
                     print(line)
                     print(f"{self.type}, Seed: {self.seed}\nStates: {self.states}, Alphabet: {self.alphabet}, Sequence: {self.sequence}, \nCounts: {self.counts}")
@@ -189,6 +194,7 @@ def compile_data(result_dir: str):
 
     # Collect results
     mode_results_list: list[list[CollectedResult]] = []
+    unsatisfiable = []
 
     for mode in runner_modes.values():
         result_sub_dir = f"{result_dir}/{mode.id}"
@@ -209,6 +215,8 @@ def compile_data(result_dir: str):
                 ]
             }
 
+            # print(parameters)
+
             states = int(str(parameters.get("states")))
             alphabet = int(str(parameters.get("alphabet")))
             sequence = int(str(parameters.get("sequence")))
@@ -219,11 +227,20 @@ def compile_data(result_dir: str):
             with open(f"{result_sub_dir}/{result_file}", "r") as file:
                 lines = [json.loads(line) for line in file]
 
-            results.append(Result(states, alphabet, sequence, counts, seed, mode.id).collectResultFromLines(lines))
+            result = Result(states, alphabet, sequence, counts, seed, mode.id).collectResultFromLines(lines)
+            if result.status == SolveStatus.UNSATISFIABLE:
+                print(result.status)
+                unsatisfiable.append(len(results))
+
+            results.append(result)
 
         mode_results_list.append(results)
+    
+    print(unsatisfiable)
+    output = np.delete(np.array([np.array(results, dtype=CollectedResult) for results in mode_results_list]), unsatisfiable, axis=1)
+    print(output.shape)
 
-    return np.array(mode_results_list, dtype=CollectedResult)
+    return output
 
 
 def parseValues(results: NDArray, func: Callable, states: int | None = None, alphabet: int | None = None, max_count: int | None = None, condition: Callable | None = None):
@@ -231,13 +248,17 @@ def parseValues(results: NDArray, func: Callable, states: int | None = None, alp
     labels = []
     positions = []
     for i, _ in enumerate(results):
-        filtered_results = results[i][np.where([
-            (states == None or result.states == states) and
-            (alphabet == None or result.alphabet == alphabet) and
-            (max_count == None or max(result.counts) == max_count) and
-            (condition == None or condition(result))
-            for result in results[i]
-        ])]
+        filter = np.where([
+                (states == None or result.states == states) and
+                (alphabet == None or result.alphabet == alphabet) and
+                (max_count == None or max(result.counts) == max_count) and
+                (condition == None or condition(result))
+                for result in results[i]
+        ])
+        try:
+            filtered_results = np.array(results[i])[filter]
+        except Exception as e:
+            raise Exception(f"{e}\n{filter}\n{len(results[i])}")
         solutions = [func(result) for result in filtered_results]
         #values.append((np.mean(solutions), min(solutions), max(solutions)))
         values.append(solutions)
@@ -323,7 +344,7 @@ def plotAll(graph_dir, file_name, results, func, condition, state_nums, alphabet
 
     count_colors = ["tab:brown", "tab:orange", "tab:red", "tab:blue"]
 
-    line_handles = [Line2D([0], [0], color="black", marker=marker, linestyle=linestyle, label=label) for marker, linestyle, label in zip(markers, linestyles, ["cdfa", "decomp", "DFA"])]
+    line_handles = [Line2D([0], [0], color="black", marker=marker, linestyle=linestyle, label=label) for marker, linestyle, label in zip(markers, linestyles, ["cDFA", "decomp", "DFA"])]
     color_handles = [Line2D([0], [0], color=color, label=f"{'{'}1, {label}{'}'}") for color, label in zip(count_colors, max_counts)]
 
     fig.legend(handles=line_handles, loc='outside upper right', bbox_to_anchor=(1.005, .9), title="Type")
@@ -347,7 +368,7 @@ def plotAll(graph_dir, file_name, results, func, condition, state_nums, alphabet
                 for values in np.array(all_values, dtype=list)[indices]:
                     avgs.append(np.mean(values) if len(values) > 0 else 0)
 
-                ax.plot(state_nums, avgs, markers[idx] + linestyles[idx], linewidth=2, color=count_colors[i])
+                ax.plot(state_nums, avgs, markers[idx] + linestyles[idx], linewidth=2, color=count_colors[i], zorder=idx+2)
 
         ax.set_title(f"\nwith |Σ|={alphabet}")
         ax.set_xlabel("|Q| amount of states of cDFA")
@@ -399,8 +420,13 @@ def main():
     alphabet_sizes = [3, 6]
     max_counts = [2, 4, 8, 16]
 
-    plotAll(graph_dir, "all_solveTime_solutions", results,
-            lambda r: r.timeline[-1], None,
+    for result in results.flatten():
+        if result.status != SolveStatus.SOLUTION:
+            print(f"{result.type}: {result.status}")
+            print(f"  {result.states, result.alphabet, result.counts, result.seed}")
+
+    plotAll(graph_dir, "all_solveTime", results,
+            lambda r: r.timeline[-1] if r.status == SolveStatus.SOLUTION else r.timeline[-1] * 2, None,
             state_nums, alphabet_sizes, max_counts,
             "Average solve time",
             "Average solve time (s)", 'log', 0.00_01, 100)
@@ -417,28 +443,26 @@ def main():
             lambda r: r.nSolutions == 1 and r.nogoods[-1] != 0,
             state_nums, alphabet_sizes, max_counts,
             "Average LBD",
-            "Average LBD", 'log', 0.1, 155)
+            "Average LBD", 'log', 3, 155)
 
     plotAll(graph_dir, "all_num_propagations", results,
-            lambda r: r.propagations[-1],
-            lambda r: r.nSolutions == 1,
+            lambda r: r.propagations[-1] if r.status == SolveStatus.SOLUTION else r.propagations[-1] * 2, None,
             state_nums, alphabet_sizes, max_counts,
             "Average number of propagations",
-            "Average number of propagations", 'log', 10, 2000_000)
+            "Average number of propagations", 'log', 10, 4000_000)
 
     plotAll(graph_dir, "all_num_nogoods", results,
-            lambda r: r.nogoods[-1],
-            lambda r: r.nSolutions == 1,
+            lambda r: r.nogoods[-1] if r.status == SolveStatus.SOLUTION else r.nogoods[-1] * 2, None,
             state_nums, alphabet_sizes, max_counts,
             "Average number of conflicts",
-            "Average number of conflicts", 'log', 0.1, 10_000)
+            "Average number of conflicts", 'symlog', -.1, 30_000)
 
     # Plot all individual boxplots.
     for alphabet in alphabet_sizes:
         for max_count in max_counts:
             # Compare number of solutions
             setup =  f"\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
-            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.timeline[-1],
+            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.timeline[-1] if r.status == SolveStatus.SOLUTION else r.timeline[-1] * 2,
                                                                                state_nums, alphabet, max_count, colors,
                                                                                None)
             plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, graph_dir,
@@ -466,18 +490,18 @@ def main():
 
             # Compare number of propagations
             setup =  f"\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
-            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.propagations[-1],
+            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.propagations[-1] if r.status == SolveStatus.SOLUTION else r.propagations[-1] * 2,
                                                                                state_nums, alphabet, max_count, colors,
-                                                                               lambda r: r.nSolutions == 1)
+                                                                               None)
             plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, graph_dir,
                                     "propagations", "Average number of propagations per solution",
                                     setup, alphabet, max_count, 1, "decomp")
 
             # Compare number of nogoods
             setup =  f"\nwith |Σ|={alphabet}, counts={"{1, "}{max_count}{'}'}"
-            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.nogoods[-1],
+            all_values, all_positions, all_labels, all_colors = valuesByStates(results, lambda r: r.nogoods[-1] if r.status == SolveStatus.SOLUTION else r.nogoods[-1] * 2,
                                                                                state_nums, alphabet, max_count, colors,
-                                                                               lambda r: r.nSolutions == 1)
+                                                                               None)
             plotByStatesAndWithoutX(all_values, all_positions, all_labels, all_colors, graph_dir,
                                     "nogoods", "Number of nogoods",
                                     setup, alphabet, max_count, 1, "decomp")

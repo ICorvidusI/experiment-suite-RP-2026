@@ -1,0 +1,1 @@
+/nix/store/bzzl3l113cwxsmx1j6r56dvdyx8m26ap-scripts-generate_regular_counting_symmetric.sh
