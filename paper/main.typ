@@ -144,7 +144,7 @@
   #show par: it => block(inset: (left: 1cm, right: 1cm), it)
   #set heading(numbering: none)
   = Abstract
-  cDFAs offer a more natural encoding of counting regular patterns---a prevalent problem in timetabling and sequencing---than widely-used DFAs. A cDFA-based propagator for finite domain constraint solving has been shown to solve satisfaction problems faster and make more propagations than the decomposition of a DFA-based regular constraint. This paper extends that algorithm with explanations for lazy clause generation and shows that it often solves satisfaction problems faster than a DFA-based regular constraint both decomposed and propagated, even though the explanations are simple. Additionally, this paper showcases a generator for cDFA and DFA that are equivalent to each other to aid comparison of the constraints.
+  cDFAs offer a more natural encoding of counting regular patterns---a prevalent problem in timetabling and sequencing---than widely-used DFAs. A cDFA-based propagator for finite domain constraint solving has been shown to solve satisfaction problems faster and make more propagations than the decomposition of a DFA-based regular constraint. This paper extends that algorithm with explanations for lazy clause generation and shows that it often solves satisfaction problems faster than a DFA-based regular constraint both decomposed and propagated, even though the explanations are simple and nogood quality is worse. Additionally, this paper showcases a generator for cDFA and DFA that are equivalent to each other to aid comparison of the constraints.
 /*
   The aim of this template is to make it more clear what is expected from you.
   #strong[ It is by no means required to follow this exact same structure. ]
