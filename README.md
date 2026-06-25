@@ -3,7 +3,9 @@
 [![Built with devenv](https://devenv.sh/assets/devenv-badge.svg)](https://devenv.sh)
 
 This is the reproducibility package for the paper
-"Propagating regular counting with Lazy Clause Generation".
+"Propagating regular counting with Lazy Clause Generation",
+which is part of the 2026 [Research Project](https://github.com/TU-Delft-CSE/Research-Project)
+of TU Delft.
 Here you can find the experiments used for the paper and their history.
 
 ## Setup devenv
